@@ -14,7 +14,7 @@
         align-items: center;
         min-height: 100vh;
         font-family: Arial, sans-serif;
-        overflow: hidden; /* Prevent scrollbars */
+        overflow: hidden;
         box-sizing: border-box;
       }
       #gameCanvas {
@@ -28,15 +28,10 @@
   <body>
     <canvas id="gameCanvas" width="1200" height="600"></canvas>
     <script>
-      // Simple Dinosaur Food Collector Game
       const canvas = document.getElementById("gameCanvas");
       const ctx = canvas.getContext("2d");
-
-      // Game variables
       let score = 0;
       let gameTime = 0;
-
-      // Player (dinosaur)
       const dino = {
         x: 50,
         y: 300,
@@ -46,13 +41,14 @@
         gravity: 0.8,
         jumpPower: -15,
         onGround: false,
+        jumpsRemaining: 5, // Allow 5 jumps!
+        maxJumps: 5,
       };
 
-      // Food array
       const foods = [];
       let foodSpawnTimer = 0;
+      let groundPattern = []; // Store static ground pattern
 
-      // Food types
       const foodTypes = [
         { color: "#ff6b6b", points: 10 },
         { color: "#4ecdc4", points: 15 },
@@ -61,19 +57,52 @@
         { color: "#feca57", points: 30 },
       ];
 
-      // Initialize game
-      function init() {
-        dino.y = canvas.height - 100 - dino.height;
-        gameLoop();
+      function generateGroundPattern() {
+        groundPattern = [];
+        // Generate static dirt blocks
+        for (let x = 0; x < canvas.width; x += 20) {
+          for (let y = canvas.height - 100; y < canvas.height; y += 20) {
+            if (Math.random() > 0.6) {
+              groundPattern.push({ x: x, y: y, size: 20, color: "#A0522D" });
+            }
+          }
+        }
+
+        // Generate static darker dirt blocks
+        for (let x = 0; x < canvas.width; x += 15) {
+          for (let y = canvas.height - 80; y < canvas.height; y += 15) {
+            if (Math.random() > 0.7) {
+              groundPattern.push({ x: x, y: y, size: 15, color: "#654321" });
+            }
+          }
+        }
+
+        // Generate static grass pattern
+        for (let x = 0; x < canvas.width; x += 10) {
+          let grassColor = Math.random() > 0.5 ? "#228B22" : "#32CD32";
+          let grassHeight = Math.floor(Math.random() * 8) + 12;
+          groundPattern.push({
+            x: x,
+            y: canvas.height - 100,
+            width: 10,
+            height: grassHeight,
+            color: grassColor,
+            isGrass: true,
+          });
+        }
       }
 
-      // Spawn food
+      function init() {
+        dino.y = canvas.height - 100 - dino.height;
+        generateGroundPattern(); // Generate static ground once
+        gameLoop();
+      }
       function spawnFood() {
         const foodType =
           foodTypes[Math.floor(Math.random() * foodTypes.length)];
         foods.push({
           x: canvas.width,
-          y: Math.random() * (canvas.height - 200) + 50,
+          y: Math.random() * (canvas.height - 300) + 100, // Lower spawn range for easier collection
           width: 30,
           height: 30,
           color: foodType.color,
@@ -82,43 +111,36 @@
         });
       }
 
-      // Update game
       function update() {
         gameTime++;
 
-        // Update dinosaur physics
         dino.velocityY += dino.gravity;
         dino.y += dino.velocityY;
-
-        // Ground collision
         const groundY = canvas.height - 100;
         if (dino.y + dino.height >= groundY) {
           dino.y = groundY - dino.height;
           dino.velocityY = 0;
           dino.onGround = true;
+          dino.jumpsRemaining = dino.maxJumps; // Reset jumps when landing
         } else {
           dino.onGround = false;
         }
 
-        // Ceiling collision
         if (dino.y < 0) {
           dino.y = 0;
           dino.velocityY = 0;
         }
 
-        // Spawn food every 60 frames (1 second at 60fps)
         foodSpawnTimer++;
         if (foodSpawnTimer >= 60) {
           spawnFood();
           foodSpawnTimer = 0;
         }
 
-        // Update food
         for (let i = foods.length - 1; i >= 0; i--) {
           const food = foods[i];
           food.x -= food.speed;
 
-          // Check collision with dinosaur
           if (
             dino.x < food.x + food.width &&
             dino.x + dino.width > food.x &&
@@ -130,56 +152,207 @@
             continue;
           }
 
-          // Remove food that went off screen
           if (food.x + food.width < 0) {
             foods.splice(i, 1);
           }
         }
       }
 
-      // Draw everything
       function draw() {
-        // Clear canvas
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // Draw sky
         ctx.fillStyle = "#87CEEB";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Draw ground
+        // Static pixelated ground - base dirt layer
         ctx.fillStyle = "#8B4513";
         ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
 
-        // Draw grass on ground
+        // Draw static ground pattern
+        groundPattern.forEach((block) => {
+          ctx.fillStyle = block.color;
+          if (block.isGrass) {
+            ctx.fillRect(block.x, block.y, block.width, block.height);
+          } else {
+            ctx.fillRect(block.x, block.y, block.size, block.size);
+          }
+        });
+
+        // Draw dinosaur - Pixelated 8-bit style!
+        const dinoX = dino.x;
+        const dinoY = dino.y;
+        const dinoW = dino.width;
+        const dinoH = dino.height;
+
+        // Pixelated body (rectangular blocks)
         ctx.fillStyle = "#228B22";
-        ctx.fillRect(0, canvas.height - 100, canvas.width, 20);
+        ctx.fillRect(
+          dinoX + dinoW * 0.3,
+          dinoY + dinoH * 0.5,
+          dinoW * 0.4,
+          dinoH * 0.3
+        );
 
-        // Draw dinosaur
-        ctx.fillStyle = "#32CD32";
-        ctx.fillRect(dino.x, dino.y, dino.width, dino.height);
+        // Neck blocks
+        ctx.fillStyle = "#228B22";
+        ctx.fillRect(
+          dinoX + dinoW * 0.65,
+          dinoY + dinoH * 0.35,
+          dinoW * 0.1,
+          dinoH * 0.2
+        );
+        ctx.fillRect(
+          dinoX + dinoW * 0.7,
+          dinoY + dinoH * 0.25,
+          dinoW * 0.08,
+          dinoH * 0.15
+        );
 
-        // Draw simple dinosaur features
-        // Eye
+        // Pixelated head (square blocks)
+        ctx.fillStyle = "#228B22";
+        ctx.fillRect(
+          dinoX + dinoW * 0.75,
+          dinoY + dinoH * 0.15,
+          dinoW * 0.15,
+          dinoH * 0.12
+        );
+
+        // Snout block
+        ctx.fillStyle = "#228B22";
+        ctx.fillRect(
+          dinoX + dinoW * 0.88,
+          dinoY + dinoH * 0.2,
+          dinoW * 0.08,
+          dinoH * 0.06
+        );
+
+        // Pixelated tail blocks
+        ctx.fillStyle = "#228B22";
+        ctx.fillRect(
+          dinoX + dinoW * 0.1,
+          dinoY + dinoH * 0.65,
+          dinoW * 0.25,
+          dinoH * 0.1
+        );
+        ctx.fillRect(
+          dinoX - dinoW * 0.05,
+          dinoY + dinoH * 0.68,
+          dinoW * 0.18,
+          dinoH * 0.08
+        );
+        ctx.fillRect(
+          dinoX - dinoW * 0.15,
+          dinoY + dinoH * 0.7,
+          dinoW * 0.12,
+          dinoH * 0.06
+        );
+
+        // Blocky legs
+        ctx.fillStyle = "#1F5F1F";
+        ctx.fillRect(
+          dinoX + dinoW * 0.35,
+          dinoY + dinoH * 0.8,
+          dinoW * 0.08,
+          dinoH * 0.25
+        );
+        ctx.fillRect(
+          dinoX + dinoW * 0.5,
+          dinoY + dinoH * 0.8,
+          dinoW * 0.08,
+          dinoH * 0.25
+        );
+
+        // Pixelated feet
+        ctx.fillStyle = "#0F3F0F";
+        ctx.fillRect(
+          dinoX + dinoW * 0.32,
+          dinoY + dinoH * 1.0,
+          dinoW * 0.14,
+          dinoH * 0.08
+        );
+        ctx.fillRect(
+          dinoX + dinoW * 0.47,
+          dinoY + dinoH * 1.0,
+          dinoW * 0.14,
+          dinoH * 0.08
+        );
+
+        // Tiny pixelated arm
+        ctx.fillStyle = "#1F5F1F";
+        ctx.fillRect(
+          dinoX + dinoW * 0.65,
+          dinoY + dinoH * 0.55,
+          dinoW * 0.04,
+          dinoH * 0.1
+        );
+
+        // Pixelated eye (square)
         ctx.fillStyle = "#000";
-        ctx.fillRect(dino.x + 35, dino.y + 10, 8, 8);
+        ctx.fillRect(
+          dinoX + dinoW * 0.8,
+          dinoY + dinoH * 0.18,
+          dinoW * 0.04,
+          dinoH * 0.03
+        );
 
-        // Spikes
-        ctx.fillStyle = "#228B22";
-        for (let i = 0; i < 3; i++) {
-          ctx.beginPath();
-          ctx.moveTo(dino.x + 10 + i * 15, dino.y);
-          ctx.lineTo(dino.x + 15 + i * 15, dino.y - 10);
-          ctx.lineTo(dino.x + 20 + i * 15, dino.y);
-          ctx.closePath();
-          ctx.fill();
+        // Eye highlight (tiny square)
+        ctx.fillStyle = "#FFF";
+        ctx.fillRect(
+          dinoX + dinoW * 0.82,
+          dinoY + dinoH * 0.185,
+          dinoW * 0.015,
+          dinoH * 0.015
+        );
+
+        // Pixelated nostril
+        ctx.fillStyle = "#000";
+        ctx.fillRect(
+          dinoX + dinoW * 0.9,
+          dinoY + dinoH * 0.22,
+          dinoW * 0.02,
+          dinoH * 0.015
+        );
+
+        // 8-bit style spots
+        ctx.fillStyle = "#1F5F1F";
+        ctx.fillRect(
+          dinoX + dinoW * 0.38,
+          dinoY + dinoH * 0.55,
+          dinoW * 0.06,
+          dinoH * 0.04
+        );
+        ctx.fillRect(
+          dinoX + dinoW * 0.52,
+          dinoY + dinoH * 0.65,
+          dinoW * 0.05,
+          dinoH * 0.04
+        );
+
+        // Pixelated back spikes (triangular but blocky)
+        ctx.fillStyle = "#32CD32";
+        for (let i = 0; i < 4; i++) {
+          let x = dinoX + dinoW * (0.32 + i * 0.08);
+          let y = dinoY + dinoH * 0.5;
+          // Bottom row
+          ctx.fillRect(x, y, dinoW * 0.06, dinoH * 0.04);
+          // Middle row
+          ctx.fillRect(
+            x + dinoW * 0.01,
+            y - dinoH * 0.04,
+            dinoW * 0.04,
+            dinoH * 0.04
+          );
+          // Top point
+          ctx.fillRect(
+            x + dinoW * 0.02,
+            y - dinoH * 0.08,
+            dinoW * 0.02,
+            dinoH * 0.04
+          );
         }
 
-        // Draw food
         foods.forEach((food) => {
           ctx.fillStyle = food.color;
           ctx.fillRect(food.x, food.y, food.width, food.height);
-
-          // Add a simple shine effect
           ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
           ctx.fillRect(
             food.x + 5,
@@ -189,35 +362,30 @@
           );
         });
 
-        // Draw UI
         ctx.fillStyle = "#000";
         ctx.font = "bold 24px Arial";
         ctx.fillText(`Score: ${score}`, 20, 40);
-        ctx.fillText(`Time: ${Math.floor(gameTime / 60)}s`, 20, 70);
+        const minutes = Math.floor(gameTime / 3600);
+        const seconds = Math.floor((gameTime % 3600) / 60);
+        ctx.fillText(`Time: ${minutes}m ${seconds}s`, 20, 70);
 
-        // Draw instructions
         ctx.font = "16px Arial";
-        ctx.fillStyle = "#333";
+        ctx.fillStyle = "#FFF";
         ctx.fillText("Press SPACE to jump!", 20, canvas.height - 20);
       }
-
-      // Game loop
       function gameLoop() {
         update();
         draw();
         requestAnimationFrame(gameLoop);
       }
-
-      // Controls
       document.addEventListener("keydown", (e) => {
-        if (e.code === "Space" && dino.onGround) {
+        if (e.code === "Space" && dino.jumpsRemaining > 0) {
           dino.velocityY = dino.jumpPower;
+          dino.jumpsRemaining--;
           dino.onGround = false;
-          e.preventDefault(); // Prevent page scroll
+          e.preventDefault();
         }
       });
-
-      // Start the game
       init();
     </script>
   </body>
