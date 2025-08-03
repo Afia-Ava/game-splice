@@ -10,6 +10,9 @@
     />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
+    <meta name="timestamp" content="<?php echo time(); ?>" />
+    <meta name="cache-buster" content="v6.0-FRESH-FILE-2025" />
+    <meta name="last-modified" content="2025-08-03-completely-fresh" />
     <style>
       * {
         margin: 0;
@@ -27,7 +30,6 @@
         position: relative;
       }
 
-      /* Gaming scanlines effect */
       body::before {
         content: '';
         position: fixed;
@@ -220,9 +222,7 @@
     <div class="container">
       <div class="header">
         <h1>🎮 GAME SPLICE</h1>
-        <p>
-          Choose your adventure! Play amazing web games right in your browser.
-        </p>
+        <p>Play awesome web games right in your browser.</p>
       </div>
 
       <div class="games-grid">
@@ -248,7 +248,7 @@
 
         <div class="game-card" onclick="playGame('tetris.html')">
           <div class="game-icon">🧩</div>
-          <h3>Block Puzzle</h3>
+          <h3>TETRIS GAME</h3>
           <p>
             Drop and arrange falling blocks to clear lines in this addictive
             puzzle game!
@@ -256,24 +256,24 @@
           <a href="tetris.html" class="play-btn">Play Now</a>
         </div>
 
-        <div class="game-card coming-soon">
+        <div class="game-card" onclick="playGame('dotmuncher.html')">
           <div class="game-icon">🟡</div>
           <h3>Dot Muncher</h3>
           <p>
             Navigate through mazes, collect dots, and avoid the colorful ghosts
             in this classic arcade game!
           </p>
-          <button class="play-btn">Coming Soon</button>
+          <a href="dotmuncher.html" class="play-btn">Play Now</a>
         </div>
 
-        <div class="game-card coming-soon">
+        <div class="game-card" onclick="playGame('spacedefender.html')">
           <div class="game-icon">🚀</div>
           <h3>Space Defender</h3>
           <p>
             Defend Earth from alien invaders! Shoot down UFOs and collect
             power-ups in this action-packed shooter.
           </p>
-          <button class="play-btn">Coming Soon</button>
+          <a href="spacedefender.html" class="play-btn">Play Now</a>
         </div>
 
         <div class="game-card coming-soon">

@@ -3,75 +3,141 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Block Puzzle - Game Hub</title>
+    <title>Tetris - Game Hub</title>
+    <meta
+      http-equiv="Cache-Control"
+      content="no-cache, no-store, must-revalidate"
+    />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
       body {
         margin: 0;
-        padding: 10px;
-        background: #2c1810;
+        padding: 0;
+        background: #000000;
         display: flex;
-        flex-direction: column;
         justify-content: center;
         align-items: center;
         min-height: 100vh;
-        font-family: Arial, sans-serif;
+        font-family: 'Courier New', monospace;
         color: white;
+        position: relative;
+        overflow: hidden;
+        width: 100vw;
+        height: 100vh;
+        box-sizing: border-box;
+      }
+
+      body::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 2px,
+          rgba(255, 255, 255, 0.03) 2px,
+          rgba(255, 255, 255, 0.03) 4px
+        );
+        pointer-events: none;
+        z-index: 1000;
       }
 
       #gameCanvas {
-        border: 3px solid #8b4513;
-        background: #1a1a1a;
-        box-shadow: 0 0 20px rgba(139, 69, 19, 0.3);
+        border: 3px solid white;
+        background: #000000;
+        box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
       }
 
       .back-button {
         position: absolute;
         top: 20px;
         left: 20px;
-        background: linear-gradient(45deg, #667eea, #764ba2);
+        background: black;
         color: white;
-        border: none;
-        padding: 10px 20px;
-        border-radius: 25px;
-        font-size: 14px;
-        font-weight: bold;
+        border: 2px solid white;
+        padding: 8px 16px;
+        border-radius: 0;
+        font-size: 12px;
+        font-weight: 900;
         cursor: pointer;
         transition: all 0.3s ease;
         text-decoration: none;
         display: inline-block;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-family: 'Courier New', monospace;
         z-index: 1000;
+        max-width: calc(100vw - 350px);
       }
 
       .back-button:hover {
-        transform: scale(1.05);
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        background: white;
+        color: black;
+        border: 2px solid black;
       }
 
       .game-info {
-        margin-top: 20px;
-        text-align: center;
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        font-family: 'Courier New', monospace;
+        width: 160px;
+        max-width: calc(100vw - 350px);
+        z-index: 1000;
       }
 
       .score {
-        font-size: 24px;
-        margin-bottom: 10px;
+        font-size: 16px;
+        color: white;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border: 2px solid white;
+        padding: 12px 15px;
+        background: rgba(0, 0, 0, 0.8);
+        text-align: center;
       }
 
       .controls {
-        font-size: 14px;
-        opacity: 0.8;
+        font-size: 11px;
+        opacity: 0.9;
+        font-family: 'Courier New', monospace;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        color: #ccc;
+        line-height: 1.4;
+        border: 1px solid #666;
+        padding: 12px;
+        background: rgba(0, 0, 0, 0.6);
+        text-align: center;
       }
     </style>
   </head>
   <body>
-    <a href="index.html" class="back-button">🏠 Back to Game Hub</a>
-    <canvas id="gameCanvas" width="400" height="600"></canvas>
+    <a href="index.html" class="back-button">Back</a>
+    <canvas id="gameCanvas" width="300" height="480"></canvas>
     <div class="game-info">
       <div class="score">
-        Score: <span id="score">0</span> | Lines: <span id="lines">0</span>
+        Score: <span id="score">0</span><br />
+        Lines: <span id="lines">0</span>
       </div>
       <div class="controls">
-        Arrow keys to move • Up to rotate • Down to drop faster
+        Arrow keys to move<br />
+        Up to rotate<br />
+        Down to drop faster
       </div>
     </div>
 
@@ -82,7 +148,7 @@
       const linesElement = document.getElementById('lines');
 
       const COLS = 10;
-      const ROWS = 20;
+      const ROWS = 16;
       const BLOCK_SIZE = 30;
 
       let board = Array(ROWS)
@@ -94,24 +160,69 @@
       let lastTime = 0;
 
       const PIECES = [
-        [1, 1, 1, 1], // I
-        [1, 1, 1, 0, 1], // T
-        [1, 1, 1, 0, 0, 1], // L
-        [1, 1, 1, 1, 0, 0], // J
-        [1, 1, 0, 1, 1], // S
-        [0, 1, 1, 1, 1], // Z
-        [1, 1, 1, 1], // O
+        // I piece (horizontal)
+        [[1, 1, 1, 1]],
+        // I piece (vertical)
+        [[1], [1], [1], [1]],
+        // T piece
+        [
+          [0, 1, 0],
+          [1, 1, 1],
+        ],
+        // L piece
+        [
+          [1, 0, 0],
+          [1, 1, 1],
+        ],
+        // J piece
+        [
+          [0, 0, 1],
+          [1, 1, 1],
+        ],
+        // S piece
+        [
+          [0, 1, 1],
+          [1, 1, 0],
+        ],
+        // Z piece
+        [
+          [1, 1, 0],
+          [0, 1, 1],
+        ],
+        // O piece
+        [
+          [1, 1],
+          [1, 1],
+        ],
+        // lowercase l
+        [
+          [1, 0],
+          [1, 1],
+        ],
+        [
+          [0, 1],
+          [1, 1],
+        ],
+        // single block piece
+        [[1]],
+        // horizontal line
+        [[1, 1]],
       ];
 
       const COLORS = [
         '#000',
         '#ff0000',
+        '#ff4500',
         '#00ff00',
         '#0000ff',
         '#ffff00',
         '#ff00ff',
         '#00ffff',
         '#ffa500',
+        '#ff69b4',
+        '#9370db',
+        '#20b2aa',
+        '#dc143c',
       ];
 
       let currentPiece = {
@@ -143,12 +254,54 @@
         }
       }
 
+      function rotatePiece(piece) {
+        const rotated = [];
+        const rows = piece.length;
+        const cols = piece[0].length;
+
+        for (let i = 0; i < cols; i++) {
+          rotated[i] = [];
+          for (let j = 0; j < rows; j++) {
+            rotated[i][j] = piece[rows - 1 - j][i];
+          }
+        }
+
+        return rotated;
+      }
+
       function collision() {
-        return currentPiece.y >= ROWS - 1;
+        for (let row = 0; row < currentPiece.shape.length; row++) {
+          for (let col = 0; col < currentPiece.shape[row].length; col++) {
+            if (currentPiece.shape[row][col]) {
+              const newX = currentPiece.x + col;
+              const newY = currentPiece.y + row;
+
+              if (newX < 0 || newX >= COLS || newY >= ROWS) {
+                return true;
+              }
+
+              if (newY >= 0 && board[newY][newX] !== 0) {
+                return true;
+              }
+            }
+          }
+        }
+        return false;
       }
 
       function merge() {
-        board[currentPiece.y][currentPiece.x] = currentPiece.color;
+        for (let row = 0; row < currentPiece.shape.length; row++) {
+          for (let col = 0; col < currentPiece.shape[row].length; col++) {
+            if (currentPiece.shape[row][col]) {
+              const boardX = currentPiece.x + col;
+              const boardY = currentPiece.y + row;
+              if (boardY >= 0) {
+                board[boardY][boardX] = currentPiece.color;
+              }
+            }
+          }
+        }
+
         for (let row = ROWS - 1; row >= 0; row--) {
           if (board[row].every(cell => cell !== 0)) {
             board.splice(row, 1);
@@ -157,13 +310,15 @@
             score += 100;
             linesElement.textContent = lines;
             scoreElement.textContent = score;
+            row++;
           }
         }
       }
 
       function draw() {
-        ctx.fillStyle = '#1a1a1a';
+        ctx.fillStyle = '#000000';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
+
         for (let row = 0; row < ROWS; row++) {
           for (let col = 0; col < COLS; col++) {
             if (board[row][col]) {
@@ -174,18 +329,20 @@
                 BLOCK_SIZE - 1,
                 BLOCK_SIZE - 1
               );
+
+              ctx.strokeStyle = '#ffffff';
+              ctx.lineWidth = 1;
+              ctx.strokeRect(
+                col * BLOCK_SIZE,
+                row * BLOCK_SIZE,
+                BLOCK_SIZE - 1,
+                BLOCK_SIZE - 1
+              );
             }
           }
         }
 
-        ctx.fillStyle = COLORS[currentPiece.color];
-        ctx.fillRect(
-          currentPiece.x * BLOCK_SIZE,
-          currentPiece.y * BLOCK_SIZE,
-          BLOCK_SIZE - 1,
-          BLOCK_SIZE - 1
-        );
-
+        drawPiece(currentPiece);
         ctx.strokeStyle = '#333';
         ctx.lineWidth = 1;
         for (let i = 0; i <= COLS; i++) {
@@ -199,6 +356,24 @@
           ctx.moveTo(0, i * BLOCK_SIZE);
           ctx.lineTo(canvas.width, i * BLOCK_SIZE);
           ctx.stroke();
+        }
+      }
+
+      function drawPiece(piece) {
+        ctx.fillStyle = COLORS[piece.color];
+        for (let row = 0; row < piece.shape.length; row++) {
+          for (let col = 0; col < piece.shape[row].length; col++) {
+            if (piece.shape[row][col]) {
+              const x = (piece.x + col) * BLOCK_SIZE;
+              const y = (piece.y + row) * BLOCK_SIZE;
+
+              ctx.fillRect(x, y, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+
+              ctx.strokeStyle = '#ffffff';
+              ctx.lineWidth = 2;
+              ctx.strokeRect(x, y, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+            }
+          }
         }
       }
 
@@ -224,10 +399,16 @@
       document.addEventListener('keydown', e => {
         switch (e.key) {
           case 'ArrowLeft':
-            if (currentPiece.x > 0) currentPiece.x--;
+            currentPiece.x--;
+            if (collision()) {
+              currentPiece.x++;
+            }
             break;
           case 'ArrowRight':
-            if (currentPiece.x < COLS - 1) currentPiece.x++;
+            currentPiece.x++;
+            if (collision()) {
+              currentPiece.x--;
+            }
             break;
           case 'ArrowDown':
             currentPiece.y++;
@@ -238,7 +419,11 @@
             }
             break;
           case 'ArrowUp':
-            currentPiece.color = (currentPiece.color % 7) + 1;
+            const originalShape = currentPiece.shape;
+            currentPiece.shape = rotatePiece(currentPiece.shape);
+            if (collision()) {
+              currentPiece.shape = originalShape;
+            }
             break;
         }
       });
