@@ -20,4 +20,6 @@ project/assembly_name="jumpasaurus"
 
 [editor_plugins]
 
+[editor_plugins]
+
 enabled=PackedStringArray("res://addons/simple_wakatime/plugin.cfg")
