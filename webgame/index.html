@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Jumpasaurus - Dinosaur Food Collector</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 10px;
+        background: #222;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        font-family: Arial, sans-serif;
+        overflow: hidden; /* Prevent scrollbars */
+        box-sizing: border-box;
+      }
+      #gameCanvas {
+        border: 3px solid #444;
+        background: #87ceeb;
+        max-width: 95vw;
+        max-height: 90vh;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="gameCanvas" width="1200" height="600"></canvas>
+    <script>
+      // Simple Dinosaur Food Collector Game
+      const canvas = document.getElementById("gameCanvas");
+      const ctx = canvas.getContext("2d");
+
+      // Game variables
+      let score = 0;
+      let gameTime = 0;
+
+      // Player (dinosaur)
+      const dino = {
+        x: 50,
+        y: 300,
+        width: 50,
+        height: 50,
+        velocityY: 0,
+        gravity: 0.8,
+        jumpPower: -15,
+        onGround: false,
+      };
+
+      // Food array
+      const foods = [];
+      let foodSpawnTimer = 0;
+
+      // Food types
+      const foodTypes = [
+        { color: "#ff6b6b", points: 10 },
+        { color: "#4ecdc4", points: 15 },
+        { color: "#45b7d1", points: 20 },
+        { color: "#96ceb4", points: 25 },
+        { color: "#feca57", points: 30 },
+      ];
+
+      // Initialize game
+      function init() {
+        dino.y = canvas.height - 100 - dino.height;
+        gameLoop();
+      }
+
+      // Spawn food
+      function spawnFood() {
+        const foodType =
+          foodTypes[Math.floor(Math.random() * foodTypes.length)];
+        foods.push({
+          x: canvas.width,
+          y: Math.random() * (canvas.height - 200) + 50,
+          width: 30,
+          height: 30,
+          color: foodType.color,
+          points: foodType.points,
+          speed: 3 + Math.random() * 2,
+        });
+      }
+
+      // Update game
+      function update() {
+        gameTime++;
+
+        // Update dinosaur physics
+        dino.velocityY += dino.gravity;
+        dino.y += dino.velocityY;
+
+        // Ground collision
+        const groundY = canvas.height - 100;
+        if (dino.y + dino.height >= groundY) {
+          dino.y = groundY - dino.height;
+          dino.velocityY = 0;
+          dino.onGround = true;
+        } else {
+          dino.onGround = false;
+        }
+
+        // Ceiling collision
+        if (dino.y < 0) {
+          dino.y = 0;
+          dino.velocityY = 0;
+        }
+
+        // Spawn food every 60 frames (1 second at 60fps)
+        foodSpawnTimer++;
+        if (foodSpawnTimer >= 60) {
+          spawnFood();
+          foodSpawnTimer = 0;
+        }
+
+        // Update food
+        for (let i = foods.length - 1; i >= 0; i--) {
+          const food = foods[i];
+          food.x -= food.speed;
+
+          // Check collision with dinosaur
+          if (
+            dino.x < food.x + food.width &&
+            dino.x + dino.width > food.x &&
+            dino.y < food.y + food.height &&
+            dino.y + dino.height > food.y
+          ) {
+            score += food.points;
+            foods.splice(i, 1);
+            continue;
+          }
+
+          // Remove food that went off screen
+          if (food.x + food.width < 0) {
+            foods.splice(i, 1);
+          }
+        }
+      }
+
+      // Draw everything
+      function draw() {
+        // Clear canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Draw sky
+        ctx.fillStyle = "#87CEEB";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Draw ground
+        ctx.fillStyle = "#8B4513";
+        ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
+
+        // Draw grass on ground
+        ctx.fillStyle = "#228B22";
+        ctx.fillRect(0, canvas.height - 100, canvas.width, 20);
+
+        // Draw dinosaur
+        ctx.fillStyle = "#32CD32";
+        ctx.fillRect(dino.x, dino.y, dino.width, dino.height);
+
+        // Draw simple dinosaur features
+        // Eye
+        ctx.fillStyle = "#000";
+        ctx.fillRect(dino.x + 35, dino.y + 10, 8, 8);
+
+        // Spikes
+        ctx.fillStyle = "#228B22";
+        for (let i = 0; i < 3; i++) {
+          ctx.beginPath();
+          ctx.moveTo(dino.x + 10 + i * 15, dino.y);
+          ctx.lineTo(dino.x + 15 + i * 15, dino.y - 10);
+          ctx.lineTo(dino.x + 20 + i * 15, dino.y);
+          ctx.closePath();
+          ctx.fill();
+        }
+
+        // Draw food
+        foods.forEach((food) => {
+          ctx.fillStyle = food.color;
+          ctx.fillRect(food.x, food.y, food.width, food.height);
+
+          // Add a simple shine effect
+          ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+          ctx.fillRect(
+            food.x + 5,
+            food.y + 5,
+            food.width - 10,
+            food.height - 10
+          );
+        });
+
+        // Draw UI
+        ctx.fillStyle = "#000";
+        ctx.font = "bold 24px Arial";
+        ctx.fillText(`Score: ${score}`, 20, 40);
+        ctx.fillText(`Time: ${Math.floor(gameTime / 60)}s`, 20, 70);
+
+        // Draw instructions
+        ctx.font = "16px Arial";
+        ctx.fillStyle = "#333";
+        ctx.fillText("Press SPACE to jump!", 20, canvas.height - 20);
+      }
+
+      // Game loop
+      function gameLoop() {
+        update();
+        draw();
+        requestAnimationFrame(gameLoop);
+      }
+
+      // Controls
+      document.addEventListener("keydown", (e) => {
+        if (e.code === "Space" && dino.onGround) {
+          dino.velocityY = dino.jumpPower;
+          dino.onGround = false;
+          e.preventDefault(); // Prevent page scroll
+        }
+      });
+
+      // Start the game
+      init();
+    </script>
+  </body>
+</html>
