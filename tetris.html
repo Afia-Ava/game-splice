@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Block Puzzle - Game Hub</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 10px;
+        background: #2c1810;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        font-family: Arial, sans-serif;
+        color: white;
+      }
+
+      #gameCanvas {
+        border: 3px solid #8b4513;
+        background: #1a1a1a;
+        box-shadow: 0 0 20px rgba(139, 69, 19, 0.3);
+      }
+
+      .back-button {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 25px;
+        font-size: 14px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-block;
+        z-index: 1000;
+      }
+
+      .back-button:hover {
+        transform: scale(1.05);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      }
+
+      .game-info {
+        margin-top: 20px;
+        text-align: center;
+      }
+
+      .score {
+        font-size: 24px;
+        margin-bottom: 10px;
+      }
+
+      .controls {
+        font-size: 14px;
+        opacity: 0.8;
+      }
+    </style>
+  </head>
+  <body>
+    <a href="index.html" class="back-button">🏠 Back to Game Hub</a>
+    <canvas id="gameCanvas" width="400" height="600"></canvas>
+    <div class="game-info">
+      <div class="score">
+        Score: <span id="score">0</span> | Lines: <span id="lines">0</span>
+      </div>
+      <div class="controls">
+        Arrow keys to move • Up to rotate • Down to drop faster
+      </div>
+    </div>
+
+    <script>
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
+      const scoreElement = document.getElementById('score');
+      const linesElement = document.getElementById('lines');
+
+      const COLS = 10;
+      const ROWS = 20;
+      const BLOCK_SIZE = 30;
+
+      let board = Array(ROWS)
+        .fill()
+        .map(() => Array(COLS).fill(0));
+      let score = 0;
+      let lines = 0;
+      let dropTime = 0;
+      let lastTime = 0;
+
+      const PIECES = [
+        [1, 1, 1, 1], // I
+        [1, 1, 1, 0, 1], // T
+        [1, 1, 1, 0, 0, 1], // L
+        [1, 1, 1, 1, 0, 0], // J
+        [1, 1, 0, 1, 1], // S
+        [0, 1, 1, 1, 1], // Z
+        [1, 1, 1, 1], // O
+      ];
+
+      const COLORS = [
+        '#000',
+        '#ff0000',
+        '#00ff00',
+        '#0000ff',
+        '#ffff00',
+        '#ff00ff',
+        '#00ffff',
+        '#ffa500',
+      ];
+
+      let currentPiece = {
+        x: 3,
+        y: 0,
+        shape: [],
+        color: 1,
+      };
+
+      function createPiece() {
+        const pieceIndex = Math.floor(Math.random() * PIECES.length);
+        const piece = PIECES[pieceIndex];
+
+        currentPiece = {
+          x: 3,
+          y: 0,
+          shape: piece,
+          color: pieceIndex + 1,
+        };
+
+        if (collision()) {
+          board = Array(ROWS)
+            .fill()
+            .map(() => Array(COLS).fill(0));
+          score = 0;
+          lines = 0;
+          scoreElement.textContent = score;
+          linesElement.textContent = lines;
+        }
+      }
+
+      function collision() {
+        return currentPiece.y >= ROWS - 1;
+      }
+
+      function merge() {
+        board[currentPiece.y][currentPiece.x] = currentPiece.color;
+        for (let row = ROWS - 1; row >= 0; row--) {
+          if (board[row].every(cell => cell !== 0)) {
+            board.splice(row, 1);
+            board.unshift(Array(COLS).fill(0));
+            lines++;
+            score += 100;
+            linesElement.textContent = lines;
+            scoreElement.textContent = score;
+          }
+        }
+      }
+
+      function draw() {
+        ctx.fillStyle = '#1a1a1a';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        for (let row = 0; row < ROWS; row++) {
+          for (let col = 0; col < COLS; col++) {
+            if (board[row][col]) {
+              ctx.fillStyle = COLORS[board[row][col]];
+              ctx.fillRect(
+                col * BLOCK_SIZE,
+                row * BLOCK_SIZE,
+                BLOCK_SIZE - 1,
+                BLOCK_SIZE - 1
+              );
+            }
+          }
+        }
+
+        ctx.fillStyle = COLORS[currentPiece.color];
+        ctx.fillRect(
+          currentPiece.x * BLOCK_SIZE,
+          currentPiece.y * BLOCK_SIZE,
+          BLOCK_SIZE - 1,
+          BLOCK_SIZE - 1
+        );
+
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 1;
+        for (let i = 0; i <= COLS; i++) {
+          ctx.beginPath();
+          ctx.moveTo(i * BLOCK_SIZE, 0);
+          ctx.lineTo(i * BLOCK_SIZE, canvas.height);
+          ctx.stroke();
+        }
+        for (let i = 0; i <= ROWS; i++) {
+          ctx.beginPath();
+          ctx.moveTo(0, i * BLOCK_SIZE);
+          ctx.lineTo(canvas.width, i * BLOCK_SIZE);
+          ctx.stroke();
+        }
+      }
+
+      function update(time = 0) {
+        const deltaTime = time - lastTime;
+        lastTime = time;
+        dropTime += deltaTime;
+
+        if (dropTime > 1000) {
+          currentPiece.y++;
+          if (collision()) {
+            currentPiece.y--;
+            merge();
+            createPiece();
+          }
+          dropTime = 0;
+        }
+
+        draw();
+        requestAnimationFrame(update);
+      }
+
+      document.addEventListener('keydown', e => {
+        switch (e.key) {
+          case 'ArrowLeft':
+            if (currentPiece.x > 0) currentPiece.x--;
+            break;
+          case 'ArrowRight':
+            if (currentPiece.x < COLS - 1) currentPiece.x++;
+            break;
+          case 'ArrowDown':
+            currentPiece.y++;
+            if (collision()) {
+              currentPiece.y--;
+              merge();
+              createPiece();
+            }
+            break;
+          case 'ArrowUp':
+            currentPiece.color = (currentPiece.color % 7) + 1;
+            break;
+        }
+      });
+
+      createPiece();
+      update();
+    </script>
+  </body>
+</html>

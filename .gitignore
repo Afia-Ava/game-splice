@@ -8,6 +8,13 @@
 .DS_Store
 Thumbs.db
 
+# Development and test files
+*-simple.html
+*-test.html
+test.html
+backup-*
+*-backup.*
+
 # Sensitive data
 *api_key*
 *secret*
