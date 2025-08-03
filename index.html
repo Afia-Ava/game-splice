@@ -28,8 +28,8 @@
   <body>
     <canvas id="gameCanvas" width="1200" height="600"></canvas>
     <script>
-      const canvas = document.getElementById("gameCanvas");
-      const ctx = canvas.getContext("2d");
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
       let score = 0;
       let gameTime = 0;
       const dino = {
@@ -51,13 +51,63 @@
       const obstacles = [];
       let obstacleSpawnTimer = 0;
       let gameOver = false;
+      let darkMode = true;
+
+      const themes = {
+        dark: {
+          sky: '#1a1a2e',
+          ground: '#2d2d44',
+          groundBlocks: ['#4a4a5e', '#3a3a4a'],
+          grass: ['#3d5a3d', '#4a6b4a'],
+          dino: {
+            main: '#4a6741',
+            legs: '#3a5038',
+            feet: '#2a3a28',
+            spots: '#3a5038',
+            spikes: '#5a7c57',
+          },
+          cactus: {
+            main: '#4a5c4a',
+            spikes: '#2a3a2a',
+            highlight: '#6a7c6a',
+          },
+          text: '#FFF',
+          subText: '#CCC',
+          food: ['#ff8a8a', '#8ac4ff', '#85c1ff', '#b6d4b6', '#ffdf8a'],
+        },
+        light: {
+          sky: '#87CEEB',
+          ground: '#8B4513',
+          groundBlocks: ['#A0522D', '#654321'],
+          grass: ['#228B22', '#32CD32'],
+          dino: {
+            main: '#228B22',
+            legs: '#1F5F1F',
+            feet: '#0F3F0F',
+            spots: '#1F5F1F',
+            spikes: '#32CD32',
+          },
+          cactus: {
+            main: '#2F4F2F',
+            spikes: '#1C3A1C',
+            highlight: '#4F6F4F',
+          },
+          text: '#000',
+          subText: '#FFF',
+          food: ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57'],
+        },
+      };
+
+      function getCurrentTheme() {
+        return darkMode ? themes.dark : themes.light;
+      }
 
       const foodTypes = [
-        { color: "#ff6b6b", points: 50 },
-        { color: "#4ecdc4", points: 75 },
-        { color: "#45b7d1", points: 100 },
-        { color: "#96ceb4", points: 125 },
-        { color: "#feca57", points: 150 },
+        { color: getCurrentTheme().food[0], points: 50 },
+        { color: getCurrentTheme().food[1], points: 75 },
+        { color: getCurrentTheme().food[2], points: 100 },
+        { color: getCurrentTheme().food[3], points: 125 },
+        { color: getCurrentTheme().food[4], points: 150 },
       ];
 
       function generateGroundPattern() {
@@ -65,7 +115,7 @@
         for (let x = 0; x < canvas.width; x += 20) {
           for (let y = canvas.height - 100; y < canvas.height; y += 20) {
             if (Math.random() > 0.6) {
-              groundPattern.push({ x: x, y: y, size: 20, color: "#A0522D" });
+              groundPattern.push({ x: x, y: y, size: 20, color: '#A0522D' });
             }
           }
         }
@@ -73,13 +123,15 @@
         for (let x = 0; x < canvas.width; x += 15) {
           for (let y = canvas.height - 80; y < canvas.height; y += 15) {
             if (Math.random() > 0.7) {
-              groundPattern.push({ x: x, y: y, size: 15, color: "#654321" });
+              groundPattern.push({ x: x, y: y, size: 15, color: '#654321' });
             }
           }
         }
 
         for (let x = 0; x < canvas.width; x += 10) {
-          let grassColor = Math.random() > 0.5 ? "#228B22" : "#32CD32";
+          let grassColors = getCurrentTheme().grass;
+          let grassColor =
+            Math.random() > 0.5 ? grassColors[0] : grassColors[1];
           let grassHeight = Math.floor(Math.random() * 8) + 12;
           groundPattern.push({
             x: x,
@@ -98,6 +150,14 @@
         gameLoop();
       }
       function spawnFood() {
+        const foodColors = getCurrentTheme().food;
+        const foodTypes = [
+          { color: foodColors[0], points: 50 },
+          { color: foodColors[1], points: 75 },
+          { color: foodColors[2], points: 100 },
+          { color: foodColors[3], points: 125 },
+          { color: foodColors[4], points: 150 },
+        ];
         const foodType =
           foodTypes[Math.floor(Math.random() * foodTypes.length)];
         foods.push({
@@ -112,12 +172,24 @@
       }
 
       function spawnObstacle() {
+        // Increase speed based on score for higher difficulty
+        let baseSpeed = 3;
+        let speedMultiplier = 1;
+
+        if (score >= 5000) {
+          speedMultiplier = 2.5;
+        } else if (score >= 3000) {
+          speedMultiplier = 2;
+        } else if (score >= 1000) {
+          speedMultiplier = 1.5;
+        }
+
         obstacles.push({
           x: canvas.width,
           y: canvas.height - 100 - 40,
           width: 20,
           height: 40,
-          speed: 3 + Math.random() * 1.5,
+          speed: (baseSpeed + Math.random() * 1.5) * speedMultiplier,
         });
       }
 
@@ -150,7 +222,19 @@
         }
 
         obstacleSpawnTimer++;
-        if (obstacleSpawnTimer >= 180) {
+
+        // Dynamic obstacle spawn rate based on score
+        let obstacleSpawnRate = 180; // Default: every 3 seconds at 60fps
+
+        if (score >= 5000) {
+          obstacleSpawnRate = 90; // Every 1.5 seconds
+        } else if (score >= 3000) {
+          obstacleSpawnRate = 120; // Every 2 seconds
+        } else if (score >= 1500) {
+          obstacleSpawnRate = 150; // Every 2.5 seconds
+        }
+
+        if (obstacleSpawnTimer >= obstacleSpawnRate) {
           spawnObstacle();
           obstacleSpawnTimer = 0;
         }
@@ -196,18 +280,25 @@
       }
 
       function draw() {
+        const theme = getCurrentTheme();
+
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "#87CEEB";
+        ctx.fillStyle = theme.sky;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        ctx.fillStyle = "#8B4513";
+        ctx.fillStyle = theme.ground;
         ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
 
-        groundPattern.forEach((block) => {
-          ctx.fillStyle = block.color;
+        groundPattern.forEach(block => {
           if (block.isGrass) {
+            ctx.fillStyle = block.color;
             ctx.fillRect(block.x, block.y, block.width, block.height);
           } else {
+            let darkColor =
+              block.color === '#A0522D'
+                ? theme.groundBlocks[0]
+                : theme.groundBlocks[1];
+            ctx.fillStyle = darkColor;
             ctx.fillRect(block.x, block.y, block.size, block.size);
           }
         });
@@ -217,7 +308,7 @@
         const dinoW = dino.width;
         const dinoH = dino.height;
 
-        ctx.fillStyle = "#228B22";
+        ctx.fillStyle = theme.dino.main;
         ctx.fillRect(
           dinoX + dinoW * 0.3,
           dinoY + dinoH * 0.5,
@@ -225,7 +316,7 @@
           dinoH * 0.3
         );
 
-        ctx.fillStyle = "#228B22";
+        ctx.fillStyle = theme.dino.main;
         ctx.fillRect(
           dinoX + dinoW * 0.65,
           dinoY + dinoH * 0.35,
@@ -239,7 +330,7 @@
           dinoH * 0.15
         );
 
-        ctx.fillStyle = "#228B22";
+        ctx.fillStyle = theme.dino.main;
         ctx.fillRect(
           dinoX + dinoW * 0.75,
           dinoY + dinoH * 0.15,
@@ -247,7 +338,7 @@
           dinoH * 0.12
         );
 
-        ctx.fillStyle = "#228B22";
+        ctx.fillStyle = theme.dino.main;
         ctx.fillRect(
           dinoX + dinoW * 0.88,
           dinoY + dinoH * 0.2,
@@ -255,7 +346,7 @@
           dinoH * 0.06
         );
 
-        ctx.fillStyle = "#228B22";
+        ctx.fillStyle = theme.dino.main;
         ctx.fillRect(
           dinoX + dinoW * 0.1,
           dinoY + dinoH * 0.65,
@@ -275,7 +366,7 @@
           dinoH * 0.06
         );
 
-        ctx.fillStyle = "#1F5F1F";
+        ctx.fillStyle = theme.dino.legs;
         ctx.fillRect(
           dinoX + dinoW * 0.35,
           dinoY + dinoH * 0.8,
@@ -289,7 +380,7 @@
           dinoH * 0.25
         );
 
-        ctx.fillStyle = "#0F3F0F";
+        ctx.fillStyle = theme.dino.feet;
         ctx.fillRect(
           dinoX + dinoW * 0.32,
           dinoY + dinoH * 1.0,
@@ -303,7 +394,7 @@
           dinoH * 0.08
         );
 
-        ctx.fillStyle = "#1F5F1F";
+        ctx.fillStyle = theme.dino.legs;
         ctx.fillRect(
           dinoX + dinoW * 0.65,
           dinoY + dinoH * 0.55,
@@ -311,7 +402,7 @@
           dinoH * 0.1
         );
 
-        ctx.fillStyle = "#000";
+        ctx.fillStyle = '#000';
         ctx.fillRect(
           dinoX + dinoW * 0.8,
           dinoY + dinoH * 0.18,
@@ -319,7 +410,7 @@
           dinoH * 0.03
         );
 
-        ctx.fillStyle = "#FFF";
+        ctx.fillStyle = '#FFF';
         ctx.fillRect(
           dinoX + dinoW * 0.82,
           dinoY + dinoH * 0.185,
@@ -327,7 +418,7 @@
           dinoH * 0.015
         );
 
-        ctx.fillStyle = "#000";
+        ctx.fillStyle = '#000';
         ctx.fillRect(
           dinoX + dinoW * 0.9,
           dinoY + dinoH * 0.22,
@@ -335,7 +426,7 @@
           dinoH * 0.015
         );
 
-        ctx.fillStyle = "#1F5F1F";
+        ctx.fillStyle = theme.dino.spots;
         ctx.fillRect(
           dinoX + dinoW * 0.38,
           dinoY + dinoH * 0.55,
@@ -349,7 +440,7 @@
           dinoH * 0.04
         );
 
-        ctx.fillStyle = "#32CD32";
+        ctx.fillStyle = theme.dino.spikes;
         for (let i = 0; i < 4; i++) {
           let x = dinoX + dinoW * (0.32 + i * 0.08);
           let y = dinoY + dinoH * 0.5;
@@ -368,18 +459,18 @@
           );
         }
 
-        foods.forEach((food) => {
+        foods.forEach(food => {
           const fx = food.x;
           const fy = food.y;
           const fw = food.width;
           const fh = food.height;
           ctx.fillStyle = food.color;
           ctx.fillRect(fx + 4, fy + 4, fw - 8, fh - 8);
-          ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
           ctx.fillRect(fx + 6, fy + 6, fw * 0.3, fh * 0.2);
           ctx.fillRect(fx + 6, fy + 8, fw * 0.2, fh * 0.3);
 
-          ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
           ctx.fillRect(fx + fw - 10, fy + fh - 8, fw * 0.2, fh * 0.15);
           ctx.fillRect(fx + fw - 8, fy + fh - 10, fw * 0.15, fh * 0.2);
 
@@ -388,28 +479,28 @@
           ctx.fillRect(fx + 2, fy + fh - 4, fw - 4, 2);
           ctx.fillRect(fx + 2, fy + 2, 2, fh - 4);
           ctx.fillRect(fx + fw - 4, fy + 2, 2, fh - 4);
-          ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
           ctx.fillRect(fx + 4, fy + 4, 2, 2);
-          ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
           ctx.fillRect(fx + fw - 6, fy + fh - 6, 2, 2);
         });
 
-        obstacles.forEach((obstacle) => {
+        obstacles.forEach(obstacle => {
           const ox = obstacle.x;
           const oy = obstacle.y;
           const ow = obstacle.width;
           const oh = obstacle.height;
 
-          ctx.fillStyle = "#2F4F2F";
+          ctx.fillStyle = theme.cactus.main;
           ctx.fillRect(ox + 6, oy, ow * 0.4, oh);
 
-          ctx.fillStyle = "#2F4F2F";
+          ctx.fillStyle = theme.cactus.main;
           ctx.fillRect(ox + 2, oy + oh * 0.3, ow * 0.3, ow * 0.2);
           ctx.fillRect(ox, oy + oh * 0.3, ow * 0.2, oh * 0.4);
           ctx.fillRect(ox + ow * 0.7, oy + oh * 0.4, ow * 0.3, ow * 0.2);
           ctx.fillRect(ox + ow * 0.8, oy + oh * 0.4, ow * 0.2, oh * 0.3);
 
-          ctx.fillStyle = "#1C3A1C";
+          ctx.fillStyle = theme.cactus.spikes;
           for (let i = 0; i < 6; i++) {
             let spikeY = oy + (i * oh) / 6 + 2;
             ctx.fillRect(ox + 4, spikeY, 2, 3);
@@ -417,39 +508,54 @@
             ctx.fillRect(ox + ow * 0.35, spikeY, 3, 2);
           }
 
-          ctx.fillStyle = "#4F6F4F";
+          ctx.fillStyle = theme.cactus.highlight;
           ctx.fillRect(ox + 8, oy + 2, 2, oh - 4);
 
-          ctx.fillStyle = "#2F4F2F";
+          ctx.fillStyle = theme.cactus.main;
           ctx.fillRect(ox + 4, oy + oh - 2, ow * 0.6, 2);
         });
 
-        ctx.fillStyle = "#000";
-        ctx.font = "bold 24px Arial";
+        ctx.fillStyle = theme.text;
+        ctx.font = 'bold 24px Arial';
         ctx.fillText(`Score: ${score}`, 20, 40);
         const minutes = Math.floor(gameTime / 3600);
         const seconds = Math.floor((gameTime % 3600) / 60);
         ctx.fillText(`Time: ${minutes}m ${seconds}s`, 20, 70);
 
-        ctx.font = "16px Arial";
-        ctx.fillStyle = "#FFF";
-        ctx.fillText("Press SPACE to jump!", 20, canvas.height - 20);
+        // Display difficulty level
+        let difficulty = 'Easy';
+        if (score >= 5000) {
+          difficulty = 'Extreme';
+        } else if (score >= 3000) {
+          difficulty = 'Hard';
+        } else if (score >= 1500) {
+          difficulty = 'Medium';
+        }
+        ctx.fillText(`Difficulty: ${difficulty}`, 20, 100);
 
-        // Game Over screen
+        ctx.font = '16px Arial';
+        ctx.fillStyle = theme.subText;
+        ctx.fillText('Press SPACE to jump!', 20, canvas.height - 40);
+        ctx.fillText(
+          `Press T to toggle ${darkMode ? 'light' : 'dark'} mode`,
+          20,
+          canvas.height - 20
+        );
+
         if (gameOver) {
-          ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
           ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-          ctx.fillStyle = "#FF0000";
-          ctx.font = "bold 48px Arial";
+          ctx.fillStyle = '#FF0000';
+          ctx.font = 'bold 48px Arial';
           ctx.fillText(
-            "GAME OVER!",
+            'GAME OVER!',
             canvas.width / 2 - 150,
             canvas.height / 2 - 50
           );
 
-          ctx.fillStyle = "#FFF";
-          ctx.font = "24px Arial";
+          ctx.fillStyle = '#FFF';
+          ctx.font = '24px Arial';
           ctx.fillText(
             `Final Score: ${score}`,
             canvas.width / 2 - 80,
@@ -463,9 +569,9 @@
             canvas.height / 2 + 30
           );
 
-          ctx.font = "18px Arial";
+          ctx.font = '18px Arial';
           ctx.fillText(
-            "Press R to restart",
+            'Press R to restart',
             canvas.width / 2 - 70,
             canvas.height / 2 + 80
           );
@@ -490,18 +596,29 @@
         dino.velocityY = 0;
         dino.onGround = false;
         dino.jumpsRemaining = dino.maxJumps;
+        generateGroundPattern();
       }
 
-      document.addEventListener("keydown", (e) => {
-        if (e.code === "Space" && dino.jumpsRemaining > 0 && !gameOver) {
+      function toggleTheme() {
+        darkMode = !darkMode;
+        generateGroundPattern();
+      }
+
+      document.addEventListener('keydown', e => {
+        if (e.code === 'Space' && dino.jumpsRemaining > 0 && !gameOver) {
           dino.velocityY = dino.jumpPower;
           dino.jumpsRemaining--;
           dino.onGround = false;
           e.preventDefault();
         }
 
-        if (e.code === "KeyR" && gameOver) {
+        if (e.code === 'KeyR' && gameOver) {
           restartGame();
+          e.preventDefault();
+        }
+
+        if (e.code === 'KeyT') {
+          toggleTheme();
           e.preventDefault();
         }
       });
