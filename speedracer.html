@@ -328,6 +328,185 @@
       const canvas = document.getElementById('gameCanvas');
       const ctx = canvas.getContext('2d');
 
+      let audioContext;
+      let masterGain;
+
+      function initAudio() {
+        if (!audioContext) {
+          audioContext = new (window.AudioContext ||
+            window.webkitAudioContext)();
+          masterGain = audioContext.createGain();
+          masterGain.gain.value = 0.25;
+          masterGain.connect(audioContext.destination);
+        }
+      }
+
+      function playEngineSound() {
+        initAudio();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        const baseFreq = 80 + player.speed * 15;
+        const boostFreq = player.boost ? baseFreq * 1.3 : baseFreq;
+
+        oscillator.type = 'sawtooth';
+        oscillator.frequency.setValueAtTime(
+          boostFreq,
+          audioContext.currentTime
+        );
+        oscillator.frequency.exponentialRampToValueAtTime(
+          boostFreq + 10,
+          audioContext.currentTime + 0.1
+        );
+
+        gainNode.gain.setValueAtTime(0.08, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(
+          0.01,
+          audioContext.currentTime + 0.1
+        );
+
+        oscillator.connect(gainNode);
+        gainNode.connect(masterGain);
+
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.1);
+      }
+
+      function playBoostSound() {
+        initAudio();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        oscillator.type = 'triangle';
+        oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(
+          400,
+          audioContext.currentTime + 0.2
+        );
+        gainNode.gain.setValueAtTime(0.12, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(
+          0.01,
+          audioContext.currentTime + 0.2
+        );
+
+        oscillator.connect(gainNode);
+        gainNode.connect(masterGain);
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.2);
+      }
+      function playCoinSound() {
+        initAudio();
+        const frequencies = [523, 659, 784];
+        frequencies.forEach((freq, index) => {
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+          oscillator.type = 'sine';
+          oscillator.frequency.setValueAtTime(
+            freq,
+            audioContext.currentTime + index * 0.03
+          );
+
+          gainNode.gain.setValueAtTime(
+            0.15,
+            audioContext.currentTime + index * 0.03
+          );
+          gainNode.gain.exponentialRampToValueAtTime(
+            0.01,
+            audioContext.currentTime + index * 0.03 + 0.15
+          );
+
+          oscillator.connect(gainNode);
+          gainNode.connect(masterGain);
+          oscillator.start(audioContext.currentTime + index * 0.03);
+          oscillator.stop(audioContext.currentTime + index * 0.03 + 0.15);
+        });
+      }
+
+      function playCrashSound() {
+        initAudio();
+        for (let i = 0; i < 5; i++) {
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+
+          oscillator.type = 'sawtooth';
+          oscillator.frequency.setValueAtTime(
+            Math.random() * 200 + 100,
+            audioContext.currentTime
+          );
+          oscillator.frequency.exponentialRampToValueAtTime(
+            50,
+            audioContext.currentTime + 0.8
+          );
+
+          gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(
+            0.01,
+            audioContext.currentTime + 0.8
+          );
+
+          oscillator.connect(gainNode);
+          gainNode.connect(masterGain);
+
+          oscillator.start(audioContext.currentTime + i * 0.02);
+          oscillator.stop(audioContext.currentTime + 0.8);
+        }
+      }
+
+      function playStartSound() {
+        initAudio();
+        const frequencies = [262, 330, 392, 523, 659];
+
+        frequencies.forEach((freq, index) => {
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+
+          oscillator.type = 'sine';
+          oscillator.frequency.setValueAtTime(
+            freq,
+            audioContext.currentTime + index * 0.1
+          );
+
+          gainNode.gain.setValueAtTime(
+            0.12,
+            audioContext.currentTime + index * 0.1
+          );
+          gainNode.gain.exponentialRampToValueAtTime(
+            0.01,
+            audioContext.currentTime + index * 0.1 + 0.3
+          );
+
+          oscillator.connect(gainNode);
+          gainNode.connect(masterGain);
+
+          oscillator.start(audioContext.currentTime + index * 0.1);
+          oscillator.stop(audioContext.currentTime + index * 0.1 + 0.3);
+        });
+      }
+
+      function playUpgradeSound() {
+        initAudio();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.type = 'triangle';
+        oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(
+          800,
+          audioContext.currentTime + 0.3
+        );
+
+        gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(
+          0.01,
+          audioContext.currentTime + 0.3
+        );
+
+        oscillator.connect(gainNode);
+        gainNode.connect(masterGain);
+
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.3);
+      }
+
       let gameStarted = false;
       let gameRunning = false;
       let score = 0;
@@ -424,6 +603,7 @@
         document.getElementById('startScreen').style.display = 'none';
         document.getElementById('bestValue').textContent = bestScore;
         document.getElementById('coinsValue').textContent = totalCoins;
+        playStartSound();
         resetGame();
       }
 
@@ -543,6 +723,9 @@
             player.y + player.height,
             '#ff6600'
           );
+          if (frameCount % 10 === 0) {
+            playBoostSound();
+          }
         } else {
           player.boost = false;
           if (player.boostEnergy < player.maxBoostEnergy) {
@@ -574,6 +757,7 @@
             player.y < car.y + car.height &&
             player.y + player.height > car.y
           ) {
+            playCrashSound();
             gameOver();
             return;
           }
@@ -605,6 +789,7 @@
             coins++;
             totalCoins++;
             score += 50;
+            playCoinSound();
             createParticles(coin.x, coin.y, '#ffdd00');
             coinItems.splice(i, 1);
             continue;
@@ -905,6 +1090,7 @@
             `speedRacer${type.charAt(0).toUpperCase() + type.slice(1)}Level`,
             upgrades[type]
           );
+          playUpgradeSound();
           updateShopDisplay();
           player.maxSpeed = 3 + upgrades.speed * 0.5;
           player.lateralSpeed = 4 + upgrades.handling * 0.5;
@@ -932,6 +1118,9 @@
       document.getElementById('bestValue').textContent = bestScore;
       document.getElementById('coinsValue').textContent = totalCoins;
       gameLoop();
+
+      document.addEventListener('click', initAudio, { once: true });
+      document.addEventListener('keydown', initAudio, { once: true });
     </script>
   </body>
 </html>
