@@ -10,6 +10,11 @@
     />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
+
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
     <style>
       * {
         margin: 0;
@@ -142,10 +147,34 @@
     </div>
 
     <script>
+      if (typeof window.firebaseConfig === 'undefined') {
+        console.error(
+          'Firebase configuration not loaded. Please check firebase-config.js'
+        );
+      }
+
+      let auth,
+        db,
+        currentUser = null;
+      try {
+        firebase.initializeApp(window.firebaseConfig);
+        auth = firebase.auth();
+        db = firebase.firestore();
+        console.log('Firebase initialized successfully');
+      } catch (error) {
+        console.error('Firebase initialization error:', error);
+      }
+
+      auth.onAuthStateChanged(user => {
+        currentUser = user;
+      });
+
       const canvas = document.getElementById('gameCanvas');
       const ctx = canvas.getContext('2d');
       const scoreElement = document.getElementById('score');
       const linesElement = document.getElementById('lines');
+
+      let gameRunning = true;
 
       let audioContext;
       let masterGain;
@@ -388,14 +417,15 @@
         };
 
         if (collision()) {
-          board = Array(ROWS)
-            .fill()
-            .map(() => Array(COLS).fill(0));
-          score = 0;
-          lines = 0;
-          scoreElement.textContent = score;
-          linesElement.textContent = lines;
+          gameRunning = false;
           playGameOverSound();
+
+          if (currentUser && db) {
+            console.log('Attempting to submit score:', score);
+            submitScore('tetris', score);
+          }
+
+          showGameOverScreen();
         }
       }
 
@@ -523,6 +553,8 @@
       }
 
       function update(time = 0) {
+        if (!gameRunning) return;
+
         const deltaTime = time - lastTime;
         lastTime = time;
         dropTime += deltaTime;
@@ -542,6 +574,8 @@
       }
 
       document.addEventListener('keydown', e => {
+        if (!gameRunning) return;
+
         switch (e.key) {
           case 'ArrowLeft':
             currentPiece.x--;
@@ -581,6 +615,194 @@
             break;
         }
       });
+
+      function showGameOverScreen() {
+        const gameOverDiv = document.createElement('div');
+        gameOverDiv.id = 'gameOverScreen';
+        gameOverDiv.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.9);
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          font-family: 'Courier New', monospace;
+          color: white;
+          z-index: 1000;
+        `;
+
+        gameOverDiv.innerHTML = `
+          <h1 style="font-size: 4rem; color: #ff0000; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 3px;">GAME OVER</h1>
+          <h2 style="font-size: 2rem; color: #00ff00; margin-bottom: 10px;">Final Score: ${score}</h2>
+          <h3 style="font-size: 1.5rem; color: #ffff00; margin-bottom: 30px;">Lines Cleared: ${lines}</h3>
+          <button id="playAgainBtn" style="
+            background: black;
+            color: white;
+            border: 2px solid white;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+          ">🧩 Play Again</button>
+          <button id="backToMenuBtn" style="
+            background: black;
+            color: white;
+            border: 2px solid white;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+          ">🏠 Back to Menu</button>
+          <button id="viewLeaderboardBtn" style="
+            background: black;
+            color: white;
+            border: 2px solid #00ff00;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+          ">🏆 View Leaderboard</button>
+        `;
+
+        document.body.appendChild(gameOverDiv);
+
+        const playAgainBtn = document.getElementById('playAgainBtn');
+        const backToMenuBtn = document.getElementById('backToMenuBtn');
+        const viewLeaderboardBtn =
+          document.getElementById('viewLeaderboardBtn');
+
+        [playAgainBtn, backToMenuBtn, viewLeaderboardBtn].forEach(btn => {
+          btn.addEventListener('mouseenter', () => {
+            btn.style.background = 'white';
+            btn.style.color = 'black';
+          });
+          btn.addEventListener('mouseleave', () => {
+            btn.style.background = 'black';
+            btn.style.color = 'white';
+          });
+        });
+
+        playAgainBtn.addEventListener('click', () => {
+          document.body.removeChild(gameOverDiv);
+          resetGame();
+          gameRunning = true;
+          update();
+        });
+
+        backToMenuBtn.addEventListener('click', () => {
+          window.location.href = 'index.html';
+        });
+
+        viewLeaderboardBtn.addEventListener('click', () => {
+          window.location.href = 'index.html#leaderboard';
+        });
+      }
+
+      function resetGame() {
+        board = Array(ROWS)
+          .fill()
+          .map(() => Array(COLS).fill(0));
+        score = 0;
+        lines = 0;
+        scoreElement.textContent = score;
+        linesElement.textContent = lines;
+        dropTime = 0;
+        lastTime = 0;
+        createPiece();
+      }
+
+      async function submitScore(gameName, finalScore) {
+        console.log('=== SCORE SUBMISSION DEBUG ===');
+        console.log('submitScore called with:', gameName, finalScore);
+        console.log('Current user:', currentUser);
+        console.log('Database available:', !!db);
+        console.log('Auth state:', auth.currentUser);
+
+        if (!currentUser || !db) {
+          console.log(
+            '❌ User not logged in or Firebase not available - score not submitted'
+          );
+          return;
+        }
+
+        try {
+          console.log('✅ Submitting score to Firebase...');
+
+          // Always submit the score (no checking for better scores)
+          const numericScore =
+            typeof finalScore === 'number'
+              ? finalScore
+              : parseInt(finalScore) || 0;
+
+          const scoreDoc = await db
+            .collection('leaderboards')
+            .doc(gameName)
+            .collection('scores')
+            .add({
+              userId: currentUser.uid,
+              username:
+                currentUser.displayName || currentUser.email.split('@')[0],
+              score: numericScore,
+              lines: lines,
+              timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            });
+
+          console.log('✅ Score document written:', scoreDoc.id);
+
+          // Update user's personal best if this score is higher
+          const userRef = db.collection('users').doc(currentUser.uid);
+          const userDoc = await userRef.get();
+
+          if (userDoc.exists) {
+            const userData = userDoc.data();
+            const personalBests = userData.personalBests || {};
+
+            if (
+              !personalBests[gameName] ||
+              numericScore > personalBests[gameName]
+            ) {
+              personalBests[gameName] = numericScore;
+              await userRef.update({ personalBests: personalBests });
+              console.log('✅ Personal best updated to:', numericScore);
+            }
+          } else {
+            // Create user document if it doesn't exist
+            await userRef.set({
+              personalBests: { [gameName]: numericScore },
+            });
+            console.log(
+              '✅ New user document created with personal best:',
+              numericScore
+            );
+          }
+
+          console.log('✅ Score submitted successfully:', numericScore);
+        } catch (error) {
+          console.error('❌ Error submitting score:', error);
+          console.error('Error code:', error.code);
+          console.error('Error message:', error.message);
+        }
+      }
+
       createPiece();
       update();
 

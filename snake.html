@@ -584,17 +584,18 @@
           console.log(
             '❌ User not logged in or Firebase not available - score not submitted'
           );
-          alert('Please login on the main page to save your score!');
           return;
         }
 
         try {
           console.log('✅ Submitting score to Firebase...');
-          const testDoc = await db.collection('test').add({
-            message: 'Hello from Snake game',
-            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-          });
-          console.log('✅ Test document written:', testDoc.id);
+
+          // Always submit the score (no checking for better scores)
+          const numericScore =
+            typeof finalScore === 'number'
+              ? finalScore
+              : parseInt(finalScore) || 0;
+
           const scoreDoc = await db
             .collection('leaderboards')
             .doc(gameName)
@@ -603,36 +604,44 @@
               userId: currentUser.uid,
               username:
                 currentUser.displayName || currentUser.email.split('@')[0],
-              score: finalScore,
+              score: numericScore,
               timestamp: firebase.firestore.FieldValue.serverTimestamp(),
             });
 
           console.log('✅ Score document written:', scoreDoc.id);
+
+          // Update user's personal best if this score is higher
           const userRef = db.collection('users').doc(currentUser.uid);
           const userDoc = await userRef.get();
 
           if (userDoc.exists) {
             const userData = userDoc.data();
             const personalBests = userData.personalBests || {};
+
             if (
               !personalBests[gameName] ||
-              finalScore > personalBests[gameName]
+              numericScore > personalBests[gameName]
             ) {
-              personalBests[gameName] = finalScore;
+              personalBests[gameName] = numericScore;
               await userRef.update({ personalBests: personalBests });
-              console.log('✅ Personal best updated');
+              console.log('✅ Personal best updated to:', numericScore);
             }
+          } else {
+            // Create user document if it doesn't exist
+            await userRef.set({
+              personalBests: { [gameName]: numericScore },
+            });
+            console.log(
+              '✅ New user document created with personal best:',
+              numericScore
+            );
           }
 
-          console.log('✅ Score submitted successfully:', finalScore);
-          alert(
-            `🎉 Score ${finalScore} submitted successfully! Check the leaderboard on the main page to see your score.`
-          );
+          console.log('✅ Score submitted successfully:', numericScore);
         } catch (error) {
           console.error('❌ Error submitting score:', error);
           console.error('Error code:', error.code);
           console.error('Error message:', error.message);
-          alert('❌ Error submitting score: ' + error.message);
         }
       }
 
