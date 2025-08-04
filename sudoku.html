@@ -260,18 +260,31 @@
         position: fixed;
         top: 0;
         left: 0;
-        width: 100%;
-        height: 100%;
-        background: #000000;
+        right: 0;
+        bottom: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.98);
+        backdrop-filter: blur(5px);
         border: none;
-        padding: 30px;
+        padding: 0;
         text-align: center;
         font-family: 'Courier New', monospace;
-        z-index: 200;
+        z-index: 9999;
         display: none;
-        flex-direction: column;
         justify-content: center;
         align-items: center;
+      }
+
+      .game-over-content {
+        background: #000000;
+        border: 3px solid #00ff00;
+        border-radius: 10px;
+        padding: 40px;
+        max-width: 500px;
+        width: 90%;
+        box-shadow: 0 0 30px rgba(0, 255, 0, 0.3);
+        position: relative;
       }
 
       .game-over h2 {
@@ -436,11 +449,13 @@
           <button class="control-btn" id="hintBtn" onclick="hintCell()">
             Hint
           </button>
+          <button class="control-btn" onclick="solvePuzzle()">Solve</button>
         </div>
       </div>
     </div>
     <div class="game-info">
       <div class="score">
+        Score: <span id="scoreValue">0</span><br />
         Time: <span id="timeValue">0</span>s<br />
         Filled: <span id="filledValue">0</span>/81<br />
         Errors: <span id="errorsValue">0</span><br />
@@ -488,15 +503,68 @@
     </div>
 
     <div class="game-over" id="gameOverScreen">
-      <h2>Puzzle Solved!</h2>
-      <p>Time: <span id="finalTime">0</span> seconds</p>
-      <p>Errors: <span id="finalErrors">0</span></p>
-      <p>Hints Used: <span id="finalHints">0</span></p>
-      <p id="newRecord" style="color: #ffff00; display: none">New Best Time!</p>
-      <button class="restart-btn" onclick="restartGame()">New Puzzle</button>
-      <button class="restart-btn" onclick="showDifficulty()">
-        Change Difficulty
-      </button>
+      <div class="game-over-content">
+        <h2>🎉 Puzzle Solved!</h2>
+        <div style="font-size: 1.2rem; margin-bottom: 25px; color: #ffffff">
+          <div style="margin-bottom: 10px">
+            ⏱️ Time:
+            <span style="color: #00ff00; font-weight: bold"
+              ><span id="finalTime">0</span> seconds</span
+            >
+          </div>
+          <div style="margin-bottom: 10px">
+            ❌ Errors:
+            <span style="color: #00ff00; font-weight: bold"
+              ><span id="finalErrors">0</span></span
+            >
+          </div>
+          <div style="margin-bottom: 15px">
+            💡 Hints Used:
+            <span style="color: #00ff00; font-weight: bold"
+              ><span id="finalHints">0</span></span
+            >
+          </div>
+          <div
+            id="newRecord"
+            style="
+              color: #ffff00;
+              font-weight: bold;
+              font-size: 1.1rem;
+              margin-bottom: 15px;
+              display: none;
+            "
+          >
+            🏆 NEW PERSONAL BEST!
+          </div>
+        </div>
+        <div
+          style="
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+          "
+        >
+          <button class="restart-btn" onclick="restartGame()">
+            🔄 New Puzzle
+          </button>
+          <button class="restart-btn" onclick="showDifficulty()">
+            ⚙️ Change Difficulty
+          </button>
+          <button
+            class="restart-btn"
+            onclick="window.location.href='index.html#leaderboard'"
+          >
+            🏆 Leaderboard
+          </button>
+          <button
+            class="restart-btn"
+            onclick="window.location.href='index.html'"
+          >
+            🏠 Home
+          </button>
+        </div>
+      </div>
     </div>
 
     <script>
@@ -699,6 +767,7 @@
       let gameStarted = false;
       let gameRunning = false;
       let timer = 0;
+      let score = 0;
       let errors = 0;
       let hints = 0;
       let hintsUsed = 0;
@@ -722,6 +791,20 @@
         easy: 20,
         medium: 10,
         hard: 0,
+      };
+
+      const scoreMultipliers = {
+        easy: 1,
+        medium: 1.5,
+        hard: 2,
+      };
+
+      const basePoints = {
+        correctNumber: 10,
+        puzzleComplete: 1000,
+        noErrors: 500,
+        noHints: 300,
+        speedBonus: 2,
       };
 
       document.addEventListener('keydown', e => {
@@ -765,6 +848,7 @@
 
       function resetGame() {
         timer = 0;
+        score = 0;
         errors = 0;
         hints = 0;
         hintsUsed = 0;
@@ -916,6 +1000,17 @@
         });
       }
 
+      function calculateScore(isCorrect) {
+        if (isCorrect) {
+          const baseScore = basePoints.correctNumber;
+          const multiplier = scoreMultipliers[difficulty];
+          const points = Math.floor(baseScore * multiplier);
+          score += points;
+          return points;
+        }
+        return 0;
+      }
+
       function selectNumber(num) {
         if (!selectedCell || !gameRunning) return;
         const { row, col } = selectedCell;
@@ -939,6 +1034,7 @@
           playErrorSound();
           setTimeout(() => cell.classList.remove('error'), 1000);
         } else {
+          const points = calculateScore(true);
           playNumberPlaceSound();
         }
 
@@ -1055,6 +1151,8 @@
       }
 
       function updateUI() {
+        document.getElementById('scoreValue').textContent =
+          score.toLocaleString();
         document.getElementById('timeValue').textContent = timer;
         document.getElementById('filledValue').textContent = filledCells;
         document.getElementById('errorsValue').textContent = errors;
@@ -1089,7 +1187,7 @@
         document.getElementById('newRecord').style.display = newRecord
           ? 'block'
           : 'none';
-        document.getElementById('gameOverScreen').style.display = 'block';
+        document.getElementById('gameOverScreen').style.display = 'flex';
       }
 
       function restartGame() {

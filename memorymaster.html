@@ -10,6 +10,11 @@
     />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
+
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
     <style>
       * {
         margin: 0;
@@ -348,7 +353,6 @@
     </div>
 
     <script>
-      // Audio system
       let audioContext;
       let masterGain;
 
@@ -701,12 +705,137 @@
         }
 
         playWinSound();
-        document.getElementById('finalTime').textContent = timer;
-        document.getElementById('finalMoves').textContent = moves;
-        document.getElementById('newRecord').style.display = newRecord
-          ? 'block'
-          : 'none';
-        document.getElementById('gameOverScreen').style.display = 'block';
+
+        setTimeout(() => {
+          const username = currentUser
+            ? currentUser.displayName || currentUser.email.split('@')[0]
+            : 'Guest';
+          console.log('Memory Master: Game won! Showing game over screen...');
+          showGameOverScreen(timer, moves, difficulty, newRecord, username);
+
+          if (timer > 0) {
+            console.log('Memory Master: Attempting to submit score:', timer);
+            console.log('Memory Master: Game parameters:', {
+              gameName: 'memorymaster',
+              finalTime: timer,
+              finalMoves: moves,
+              gameDifficulty: difficulty,
+            });
+            console.log('Memory Master: Current user check:', {
+              currentUser: !!currentUser,
+              db: !!db,
+            });
+            submitScore('memorymaster', timer, moves, difficulty);
+          } else {
+            console.log('Memory Master: Timer is 0, not submitting score');
+          }
+        }, 500);
+      }
+
+      function showGameOverScreen(
+        finalTime,
+        finalMoves,
+        gameDifficulty,
+        isNewRecord,
+        username
+      ) {
+        console.log('Memory Master: showGameOverScreen called with:', {
+          finalTime,
+          finalMoves,
+          gameDifficulty,
+          isNewRecord,
+          username,
+        });
+
+        const existingScreen = document.getElementById('dynamicGameOverScreen');
+        if (existingScreen) {
+          existingScreen.remove();
+          console.log('Memory Master: Removed existing game over screen');
+        }
+
+        const gameOverScreen = document.createElement('div');
+        gameOverScreen.id = 'dynamicGameOverScreen';
+        gameOverScreen.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.9);
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          z-index: 1000;
+          font-family: 'Courier New', monospace;
+          color: white;
+        `;
+
+        const content = document.createElement('div');
+        content.style.cssText = `
+          background: #000;
+          border: 3px solid #00ff00;
+          padding: 40px;
+          text-align: center;
+          border-radius: 10px;
+          box-shadow: 0 0 30px rgba(0, 255, 0, 0.3);
+        `;
+
+        content.innerHTML = `
+          <h2 style="color: #00ff00; font-size: 2.5rem; margin-bottom: 20px; text-transform: uppercase;">🧠 Memory Master!</h2>
+          <div style="font-size: 1.2rem; margin-bottom: 25px; color: #ffffff;">
+            <div style="margin-bottom: 10px;">⏱️ Time: <span style="color: #00ff00; font-weight: bold;">${finalTime} seconds</span></div>
+            <div style="margin-bottom: 10px;">🎯 Moves: <span style="color: #00ff00; font-weight: bold;">${finalMoves}</span></div>
+            <div style="margin-bottom: 10px;">🎮 Difficulty: <span style="color: #00ff00; font-weight: bold;">${gameDifficulty.toUpperCase()}</span></div>
+            <div style="margin-bottom: 15px;">👤 Player: <span style="color: #00ff00; font-weight: bold;">${username}</span></div>
+            ${
+              isNewRecord
+                ? '<div style="color: #ffff00; font-weight: bold; font-size: 1.1rem; margin-bottom: 15px;">🏆 NEW PERSONAL BEST!</div>'
+                : ''
+            }
+            ${
+              currentUser
+                ? '<div style="color: #00aa00; font-size: 0.9rem; margin-bottom: 20px;">✅ Score submitted to leaderboard!</div>'
+                : '<div style="color: #aa0000; font-size: 0.9rem; margin-bottom: 20px;">❌ Sign in to save scores!</div>'
+            }
+          </div>
+          <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+            <button id="playAgainBtn" style="background: #000; color: #00ff00; border: 2px solid #00ff00; padding: 12px 24px; font-family: 'Courier New', monospace; font-weight: bold; cursor: pointer; text-transform: uppercase; transition: all 0.3s ease;">🔄 Play Again</button>
+            <button id="changeDifficultyBtn" style="background: #000; color: #00ff00; border: 2px solid #00ff00; padding: 12px 24px; font-family: 'Courier New', monospace; font-weight: bold; cursor: pointer; text-transform: uppercase; transition: all 0.3s ease;">⚙️ Difficulty</button>
+            <button id="leaderboardBtn" style="background: #000; color: #00ff00; border: 2px solid #00ff00; padding: 12px 24px; font-family: 'Courier New', monospace; font-weight: bold; cursor: pointer; text-transform: uppercase; transition: all 0.3s ease;">🏆 Leaderboard</button>
+            <button id="homeBtn" style="background: #000; color: #00ff00; border: 2px solid #00ff00; padding: 12px 24px; font-family: 'Courier New', monospace; font-weight: bold; cursor: pointer; text-transform: uppercase; transition: all 0.3s ease;">🏠 Home</button>
+          </div>
+        `;
+
+        gameOverScreen.appendChild(content);
+        document.body.appendChild(gameOverScreen);
+        console.log('Memory Master: Game over screen added to DOM');
+
+        document.getElementById('playAgainBtn').onclick = () => {
+          gameOverScreen.remove();
+          restartGame();
+        };
+        document.getElementById('changeDifficultyBtn').onclick = () => {
+          gameOverScreen.remove();
+          showDifficulty();
+        };
+        document.getElementById('leaderboardBtn').onclick = () => {
+          window.location.href = 'index.html#leaderboard';
+        };
+        document.getElementById('homeBtn').onclick = () => {
+          window.location.href = 'index.html';
+        };
+
+        const buttons = content.querySelectorAll('button');
+        buttons.forEach(button => {
+          button.onmouseenter = () => {
+            button.style.background = '#00ff00';
+            button.style.color = '#000';
+          };
+          button.onmouseleave = () => {
+            button.style.background = '#000';
+            button.style.color = '#00ff00';
+          };
+        });
 
         updateBestScore();
       }
@@ -714,6 +843,10 @@
       function restartGame() {
         gameRunning = true;
         document.getElementById('gameOverScreen').style.display = 'none';
+        const dynamicScreen = document.getElementById('dynamicGameOverScreen');
+        if (dynamicScreen) {
+          dynamicScreen.remove();
+        }
         resetGame();
         createBoard();
         startTimer();
@@ -723,6 +856,10 @@
         gameRunning = false;
         gameStarted = false;
         document.getElementById('gameOverScreen').style.display = 'none';
+        const dynamicScreen = document.getElementById('dynamicGameOverScreen');
+        if (dynamicScreen) {
+          dynamicScreen.remove();
+        }
         document.getElementById('startScreen').style.display = 'block';
         document.getElementById('gameBoard').style.display = 'none';
 
@@ -731,6 +868,123 @@
         }
       }
       updateBestScore();
+
+      async function submitScore(
+        gameName,
+        finalTime,
+        finalMoves,
+        gameDifficulty
+      ) {
+        console.log('=== MEMORY MASTER SCORE SUBMISSION DEBUG ===');
+        console.log(
+          'submitScore called with:',
+          gameName,
+          finalTime,
+          finalMoves,
+          gameDifficulty
+        );
+        console.log('Current user:', currentUser);
+        console.log('Database available:', !!db);
+
+        if (!currentUser || !db) {
+          console.log(
+            '❌ User not logged in or Firebase not available - score not submitted'
+          );
+          return;
+        }
+
+        try {
+          console.log('✅ Submitting score to Firebase...');
+          const numericScore =
+            typeof finalTime === 'number'
+              ? finalTime
+              : parseInt(finalTime) || 0;
+          const username =
+            currentUser.displayName || currentUser.email.split('@')[0];
+
+          const scoreData = {
+            userId: currentUser.uid,
+            username: username,
+            score: numericScore,
+            time: numericScore,
+            moves: finalMoves,
+            difficulty: gameDifficulty,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+          };
+
+          const scoreDoc = await db
+            .collection('leaderboards')
+            .doc(gameName)
+            .collection('scores')
+            .add(scoreData);
+
+          console.log('✅ Score document written:', scoreDoc.id);
+          const userRef = db.collection('users').doc(currentUser.uid);
+          const userDoc = await userRef.get();
+
+          if (userDoc.exists) {
+            const userData = userDoc.data();
+            const personalBests = userData.personalBests || {};
+
+            if (
+              !personalBests[gameName] ||
+              numericScore < personalBests[gameName]
+            ) {
+              personalBests[gameName] = numericScore;
+              await userRef.update({ personalBests: personalBests });
+              console.log('✅ Personal best updated to:', numericScore);
+            }
+          } else {
+            await userRef.set({
+              personalBests: { [gameName]: numericScore },
+            });
+            console.log(
+              '✅ New user document created with personal best:',
+              numericScore
+            );
+          }
+
+          console.log('✅ Score submitted successfully:', numericScore);
+        } catch (error) {
+          console.error('❌ Error submitting score:', error);
+          console.error('Error code:', error.code);
+          console.error('Error message:', error.message);
+        }
+      }
+
+      let auth,
+        db,
+        currentUser = null;
+
+      if (typeof window.firebaseConfig !== 'undefined') {
+        try {
+          firebase.initializeApp(window.firebaseConfig);
+          auth = firebase.auth();
+          db = firebase.firestore();
+
+          auth.onAuthStateChanged(user => {
+            currentUser = user;
+            if (user) {
+              console.log(
+                'Memory Master: User signed in:',
+                user.displayName || user.email
+              );
+            } else {
+              console.log('Memory Master: User signed out');
+            }
+          });
+
+          console.log('Firebase initialized in Memory Master game');
+        } catch (error) {
+          console.error(
+            'Firebase initialization error in Memory Master game:',
+            error
+          );
+        }
+      } else {
+        console.log('Firebase config not available in Memory Master game');
+      }
+
       document.addEventListener('click', initAudio, { once: true });
       document.addEventListener('keydown', initAudio, { once: true });
     </script>

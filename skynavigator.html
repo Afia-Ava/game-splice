@@ -239,12 +239,15 @@
     </div>
 
     <script>
-      // Firebase configuration check and initialization
       if (typeof window.firebaseConfig === 'undefined') {
-        console.error('Firebase configuration not loaded. Please check firebase-config.js');
+        console.error(
+          'Firebase configuration not loaded. Please check firebase-config.js'
+        );
       }
 
-      let auth, db, currentUser = null;
+      let auth,
+        db,
+        currentUser = null;
       try {
         firebase.initializeApp(window.firebaseConfig);
         auth = firebase.auth();
@@ -254,7 +257,6 @@
         console.error('Firebase initialization error in Sky Navigator:', error);
       }
 
-      // Auth state listener
       auth.onAuthStateChanged(user => {
         currentUser = user;
       });
@@ -705,20 +707,219 @@
           newRecord = true;
         }
 
-        // Submit score to Firebase if user is logged in
         if (currentUser && db && score > 0) {
           console.log('Attempting to submit Sky Navigator score:', score);
           submitScore('skynavigator', score);
         }
 
-        // Show new game over screen
         showGameOverScreen(newRecord);
       }
 
       function restartGame() {
         gameRunning = true;
-        document.getElementById('gameOverScreen').style.display = 'none';
+        const existingGameOver = document.getElementById('gameOverScreen');
+        if (existingGameOver) {
+          existingGameOver.remove();
+        }
+
         resetGame();
+      }
+
+      function showGameOverScreen(newRecord) {
+        const existingGameOver = document.getElementById('gameOverScreen');
+        if (existingGameOver) {
+          existingGameOver.remove();
+        }
+
+        const gameOverDiv = document.createElement('div');
+        gameOverDiv.id = 'gameOverScreen';
+        gameOverDiv.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.9);
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          font-family: 'Courier New', monospace;
+          color: white;
+          z-index: 1000;
+        `;
+
+        gameOverDiv.innerHTML = `
+          <h1 style="font-size: 4rem; color: #ff0000; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 3px;">GAME OVER</h1>
+          <h2 style="font-size: 2rem; color: #00ff00; margin-bottom: 10px;">Final Score: ${score}</h2>
+          <h3 style="font-size: 1.5rem; color: #ffff00; margin-bottom: 10px;">Distance: ${Math.floor(
+            distance
+          )}m</h3>
+          ${
+            newRecord
+              ? '<h3 style="font-size: 1.2rem; color: #00ff00; margin-bottom: 30px;">🎉 NEW BEST SCORE! 🎉</h3>'
+              : '<div style="margin-bottom: 30px;"></div>'
+          }
+          <button id="playAgainBtn" style="
+            background: black;
+            color: white;
+            border: 2px solid white;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+          ">🐦 Fly Again</button>
+          <button id="backToMenuBtn" style="
+            background: black;
+            color: white;
+            border: 2px solid white;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+          ">🏠 Back to Menu</button>
+          <button id="viewLeaderboardBtn" style="
+            background: black;
+            color: white;
+            border: 2px solid #00ff00;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+          ">🏆 View Leaderboard</button>
+        `;
+
+        document.body.appendChild(gameOverDiv);
+
+        const playAgainBtn = document.getElementById('playAgainBtn');
+        const backToMenuBtn = document.getElementById('backToMenuBtn');
+        const viewLeaderboardBtn =
+          document.getElementById('viewLeaderboardBtn');
+
+        [playAgainBtn, backToMenuBtn, viewLeaderboardBtn].forEach(btn => {
+          btn.addEventListener('mouseenter', () => {
+            btn.style.background = 'white';
+            btn.style.color = 'black';
+          });
+          btn.addEventListener('mouseleave', () => {
+            btn.style.background = 'black';
+            btn.style.color = 'white';
+          });
+        });
+
+        playAgainBtn.addEventListener('click', () => {
+          document.body.removeChild(gameOverDiv);
+          restartGame();
+        });
+
+        backToMenuBtn.addEventListener('click', () => {
+          window.location.href = 'index.html';
+        });
+
+        viewLeaderboardBtn.addEventListener('click', () => {
+          window.location.href = 'index.html#leaderboard';
+        });
+
+        if (newRecord) {
+          playNewRecordSound();
+        } else {
+          playGameOverSound();
+        }
+      }
+
+      async function submitScore(gameName, finalScore) {
+        console.log('=== SKY NAVIGATOR SCORE SUBMISSION DEBUG ===');
+        console.log('submitScore called with:', gameName, finalScore);
+        console.log('Current user:', currentUser);
+        console.log('Database available:', !!db);
+        console.log('Auth state:', auth.currentUser);
+
+        if (!currentUser || !db) {
+          console.log(
+            '❌ User not logged in or Firebase not available - score not submitted'
+          );
+          return;
+        }
+
+        try {
+          console.log('✅ Submitting Sky Navigator score to Firebase...');
+          const numericScore =
+            typeof finalScore === 'number'
+              ? finalScore
+              : parseInt(finalScore) || 0;
+
+          const scoreDoc = await db
+            .collection('leaderboards')
+            .doc(gameName)
+            .collection('scores')
+            .add({
+              userId: currentUser.uid,
+              username:
+                currentUser.displayName || currentUser.email.split('@')[0],
+              score: numericScore,
+              distance: Math.floor(distance),
+              timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            });
+
+          console.log('✅ Sky Navigator score document written:', scoreDoc.id);
+
+          const userRef = db.collection('users').doc(currentUser.uid);
+          const userDoc = await userRef.get();
+
+          if (userDoc.exists) {
+            const userData = userDoc.data();
+            const personalBests = userData.personalBests || {};
+
+            if (
+              !personalBests[gameName] ||
+              numericScore > personalBests[gameName]
+            ) {
+              await userRef.update({
+                [`personalBests.${gameName}`]: numericScore,
+              });
+              console.log(
+                '✅ Updated personal best for Sky Navigator:',
+                numericScore
+              );
+            }
+          } else {
+            await userRef.set({
+              email: currentUser.email,
+              username:
+                currentUser.displayName || currentUser.email.split('@')[0],
+              personalBests: {
+                [gameName]: numericScore,
+              },
+            });
+            console.log(
+              '✅ Created user document with Sky Navigator score:',
+              numericScore
+            );
+          }
+
+          console.log(
+            '✅ Sky Navigator score submission completed successfully'
+          );
+        } catch (error) {
+          console.error('❌ Error submitting Sky Navigator score:', error);
+          console.error('Error code:', error.code);
+          console.error('Error message:', error.message);
+        }
       }
 
       function gameLoop() {
