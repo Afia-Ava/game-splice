@@ -79,19 +79,19 @@
       .sudoku-grid {
         display: grid;
         grid-template-columns: repeat(9, 1fr);
-        gap: 1px;
+        gap: 2px;
         border: 3px solid white;
         background: white;
       }
 
       .sudoku-cell {
-        width: 40px;
-        height: 40px;
+        width: 55px;
+        height: 55px;
         border: 1px solid #666;
         background: #000;
         color: white;
         font-family: 'Courier New', monospace;
-        font-size: 1.2rem;
+        font-size: 1.6rem;
         font-weight: bold;
         text-align: center;
         cursor: pointer;
@@ -162,34 +162,34 @@
         right: 10px;
         display: flex;
         flex-direction: column;
-        gap: 6px;
+        gap: 8px;
         z-index: 100;
       }
 
       .score {
         background: #000000;
         border: 2px solid white;
-        padding: 6px 8px;
+        padding: 10px 12px;
         text-align: left;
         font-family: 'Courier New', monospace;
         font-weight: bold;
         text-transform: uppercase;
         letter-spacing: 1px;
-        min-width: 90px;
-        font-size: 0.7rem;
-        line-height: 1.2;
+        min-width: 120px;
+        font-size: 0.8rem;
+        line-height: 1.4;
       }
 
       .controls {
         background: #000000;
         border: 2px solid white;
-        padding: 5px 6px;
+        padding: 8px 10px;
         font-family: 'Courier New', monospace;
-        font-size: 0.6rem;
-        line-height: 1.2;
+        font-size: 0.7rem;
+        line-height: 1.4;
         text-transform: uppercase;
         letter-spacing: 0.5px;
-        max-width: 140px;
+        max-width: 160px;
       }
 
       .right-panel {
@@ -398,9 +398,9 @@
         }
 
         .sudoku-cell {
-          width: 30px;
-          height: 30px;
-          font-size: 1rem;
+          width: 35px;
+          height: 35px;
+          font-size: 1.1rem;
         }
 
         .number-btn {
@@ -500,6 +500,202 @@
     </div>
 
     <script>
+      let audioContext;
+      let masterGain;
+
+      function initAudio() {
+        if (!audioContext) {
+          audioContext = new (window.AudioContext ||
+            window.webkitAudioContext)();
+          masterGain = audioContext.createGain();
+          masterGain.gain.value = 0.3;
+          masterGain.connect(audioContext.destination);
+        }
+      }
+
+      function playNumberPlaceSound() {
+        initAudio();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(
+          550,
+          audioContext.currentTime + 0.1
+        );
+
+        gainNode.gain.setValueAtTime(0.12, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(
+          0.01,
+          audioContext.currentTime + 0.1
+        );
+
+        oscillator.connect(gainNode);
+        gainNode.connect(masterGain);
+
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.1);
+      }
+
+      function playErrorSound() {
+        initAudio();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.type = 'triangle';
+        oscillator.frequency.setValueAtTime(220, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(
+          180,
+          audioContext.currentTime + 0.4
+        );
+
+        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(
+          0.01,
+          audioContext.currentTime + 0.4
+        );
+
+        oscillator.connect(gainNode);
+        gainNode.connect(masterGain);
+
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.4);
+      }
+
+      function playHintSound() {
+        initAudio();
+        const frequencies = [523, 659, 784];
+
+        frequencies.forEach((freq, index) => {
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+
+          oscillator.type = 'sine';
+          oscillator.frequency.setValueAtTime(
+            freq,
+            audioContext.currentTime + index * 0.08
+          );
+
+          gainNode.gain.setValueAtTime(
+            0.1,
+            audioContext.currentTime + index * 0.08
+          );
+          gainNode.gain.exponentialRampToValueAtTime(
+            0.01,
+            audioContext.currentTime + index * 0.08 + 0.2
+          );
+
+          oscillator.connect(gainNode);
+          gainNode.connect(masterGain);
+
+          oscillator.start(audioContext.currentTime + index * 0.08);
+          oscillator.stop(audioContext.currentTime + index * 0.08 + 0.2);
+        });
+      }
+
+      function playCellSelectSound() {
+        initAudio();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(330, audioContext.currentTime);
+
+        gainNode.gain.setValueAtTime(0.08, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(
+          0.01,
+          audioContext.currentTime + 0.08
+        );
+
+        oscillator.connect(gainNode);
+        gainNode.connect(masterGain);
+
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.08);
+      }
+
+      function playClearSound() {
+        initAudio();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(300, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(
+          250,
+          audioContext.currentTime + 0.15
+        );
+
+        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(
+          0.01,
+          audioContext.currentTime + 0.15
+        );
+
+        oscillator.connect(gainNode);
+        gainNode.connect(masterGain);
+
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.15);
+      }
+
+      function playWinSound() {
+        initAudio();
+        const melody = [523, 659, 784, 1047, 1319, 1568];
+
+        melody.forEach((freq, index) => {
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+
+          oscillator.type = 'sine';
+          oscillator.frequency.setValueAtTime(
+            freq,
+            audioContext.currentTime + index * 0.12
+          );
+
+          gainNode.gain.setValueAtTime(
+            0.15,
+            audioContext.currentTime + index * 0.12
+          );
+          gainNode.gain.exponentialRampToValueAtTime(
+            0.01,
+            audioContext.currentTime + index * 0.12 + 0.25
+          );
+
+          oscillator.connect(gainNode);
+          gainNode.connect(masterGain);
+
+          oscillator.start(audioContext.currentTime + index * 0.12);
+          oscillator.stop(audioContext.currentTime + index * 0.12 + 0.25);
+        });
+      }
+
+      function playStartSound() {
+        initAudio();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.type = 'triangle';
+        oscillator.frequency.setValueAtTime(350, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(
+          500,
+          audioContext.currentTime + 0.3
+        );
+
+        gainNode.gain.setValueAtTime(0.12, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(
+          0.01,
+          audioContext.currentTime + 0.3
+        );
+
+        oscillator.connect(gainNode);
+        gainNode.connect(masterGain);
+
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.3);
+      }
+
       let gameStarted = false;
       let gameRunning = false;
       let timer = 0;
@@ -560,6 +756,7 @@
           hintBtn.style.display = 'block';
         }
 
+        playStartSound();
         resetGame();
         generatePuzzle();
         createGrid();
@@ -695,6 +892,7 @@
         );
         cell.classList.add('selected');
         highlightRelatedCells(row, col);
+        playCellSelectSound();
       }
 
       function highlightRelatedCells(row, col) {
@@ -738,7 +936,10 @@
         if (num !== solution[row][col]) {
           errors++;
           cell.classList.add('error');
+          playErrorSound();
           setTimeout(() => cell.classList.remove('error'), 1000);
+        } else {
+          playNumberPlaceSound();
         }
 
         updateUI();
@@ -759,6 +960,7 @@
 
         if (playerGrid[row][col] !== 0) {
           filledCells--;
+          playClearSound();
         }
 
         playerGrid[row][col] = 0;
@@ -796,6 +998,7 @@
         }
 
         hintsUsed++;
+        playHintSound();
         updateUI();
 
         if (filledCells === 81) {

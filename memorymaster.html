@@ -63,7 +63,7 @@
       }
 
       .game-board {
-        display: grid;
+        display: none;
         grid-template-columns: repeat(4, 1fr);
         gap: 10px;
         padding: 20px;
@@ -348,6 +348,154 @@
     </div>
 
     <script>
+      // Audio system
+      let audioContext;
+      let masterGain;
+
+      function initAudio() {
+        if (!audioContext) {
+          audioContext = new (window.AudioContext ||
+            window.webkitAudioContext)();
+          masterGain = audioContext.createGain();
+          masterGain.gain.value = 0.3;
+          masterGain.connect(audioContext.destination);
+        }
+      }
+
+      function playCardFlipSound() {
+        initAudio();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(
+          600,
+          audioContext.currentTime + 0.1
+        );
+
+        gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(
+          0.01,
+          audioContext.currentTime + 0.1
+        );
+
+        oscillator.connect(gainNode);
+        gainNode.connect(masterGain);
+
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.1);
+      }
+
+      function playMatchSound() {
+        initAudio();
+        const frequencies = [523, 659, 784];
+        frequencies.forEach((freq, index) => {
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+          oscillator.type = 'sine';
+          oscillator.frequency.setValueAtTime(
+            freq,
+            audioContext.currentTime + index * 0.05
+          );
+          gainNode.gain.setValueAtTime(
+            0.12,
+            audioContext.currentTime + index * 0.05
+          );
+          gainNode.gain.exponentialRampToValueAtTime(
+            0.01,
+            audioContext.currentTime + index * 0.05 + 0.2
+          );
+
+          oscillator.connect(gainNode);
+          gainNode.connect(masterGain);
+
+          oscillator.start(audioContext.currentTime + index * 0.05);
+          oscillator.stop(audioContext.currentTime + index * 0.05 + 0.2);
+        });
+      }
+
+      function playWrongSound() {
+        initAudio();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.type = 'triangle';
+        oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(
+          150,
+          audioContext.currentTime + 0.3
+        );
+
+        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(
+          0.01,
+          audioContext.currentTime + 0.3
+        );
+
+        oscillator.connect(gainNode);
+        gainNode.connect(masterGain);
+
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.3);
+      }
+
+      function playWinSound() {
+        initAudio();
+        const melody = [523, 659, 784, 1047, 1319];
+
+        melody.forEach((freq, index) => {
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+
+          oscillator.type = 'sine';
+          oscillator.frequency.setValueAtTime(
+            freq,
+            audioContext.currentTime + index * 0.15
+          );
+
+          gainNode.gain.setValueAtTime(
+            0.15,
+            audioContext.currentTime + index * 0.15
+          );
+          gainNode.gain.exponentialRampToValueAtTime(
+            0.01,
+            audioContext.currentTime + index * 0.15 + 0.3
+          );
+
+          oscillator.connect(gainNode);
+          gainNode.connect(masterGain);
+
+          oscillator.start(audioContext.currentTime + index * 0.15);
+          oscillator.stop(audioContext.currentTime + index * 0.15 + 0.3);
+        });
+      }
+
+      function playStartSound() {
+        initAudio();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.type = 'triangle';
+        oscillator.frequency.setValueAtTime(300, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(
+          500,
+          audioContext.currentTime + 0.2
+        );
+
+        gainNode.gain.setValueAtTime(0.12, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(
+          0.01,
+          audioContext.currentTime + 0.2
+        );
+
+        oscillator.connect(gainNode);
+        gainNode.connect(masterGain);
+
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.2);
+      }
+
       let gameStarted = false;
       let gameRunning = false;
       let timer = 0;
@@ -426,6 +574,8 @@
         gameStarted = true;
         gameRunning = true;
         document.getElementById('startScreen').style.display = 'none';
+        document.getElementById('gameBoard').style.display = 'grid';
+        playStartSound();
         resetGame();
         createBoard();
         startTimer();
@@ -490,6 +640,8 @@
         card.classList.add('flipped');
         card.textContent = card.dataset.symbol;
         flippedCards.push(card);
+        playCardFlipSound();
+
         if (flippedCards.length === 2) {
           moves++;
           document.getElementById('movesValue').textContent = moves;
@@ -508,12 +660,14 @@
           pairs = matchedPairs;
           document.getElementById('pairsValue').textContent =
             pairs + '/' + totalPairs;
+          playMatchSound();
           if (matchedPairs === totalPairs) {
             gameWon();
           }
         } else {
           card1.classList.add('wrong');
           card2.classList.add('wrong');
+          playWrongSound();
           setTimeout(() => {
             card1.classList.remove('flipped', 'wrong');
             card2.classList.remove('flipped', 'wrong');
@@ -537,6 +691,7 @@
       function gameWon() {
         gameRunning = false;
         clearInterval(timerInterval);
+        const bestKey = `memoryMasterBest_${difficulty}`;
         const currentBest = localStorage.getItem(bestKey);
         let newRecord = false;
 
@@ -545,6 +700,7 @@
           newRecord = true;
         }
 
+        playWinSound();
         document.getElementById('finalTime').textContent = timer;
         document.getElementById('finalMoves').textContent = moves;
         document.getElementById('newRecord').style.display = newRecord
@@ -568,12 +724,15 @@
         gameStarted = false;
         document.getElementById('gameOverScreen').style.display = 'none';
         document.getElementById('startScreen').style.display = 'block';
+        document.getElementById('gameBoard').style.display = 'none';
 
         if (timerInterval) {
           clearInterval(timerInterval);
         }
       }
       updateBestScore();
+      document.addEventListener('click', initAudio, { once: true });
+      document.addEventListener('keydown', initAudio, { once: true });
     </script>
   </body>
 </html>

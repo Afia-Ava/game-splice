@@ -224,6 +224,46 @@
         letter-spacing: 1px;
       }
 
+      .music-control {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: black;
+        color: white;
+        border: 2px solid white;
+        padding: 10px 15px;
+        font-family: 'Courier New', monospace;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        z-index: 1001;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .music-control:hover {
+        background: white;
+        color: black;
+        border: 2px solid black;
+      }
+
+      .music-control.muted {
+        opacity: 0.6;
+        border-color: #666;
+        color: #666;
+      }
+
+      .music-control.muted:hover {
+        background: #333;
+        color: white;
+        border-color: white;
+        opacity: 1;
+      }
+
       @media (max-width: 768px) {
         .header h1 {
           font-size: 2rem;
@@ -238,6 +278,10 @@
   </head>
   <body>
     <div class="mouse-glow" id="mouseGlow"></div>
+    <div class="music-control" id="musicControl" onclick="toggleMusic()">
+      <span id="musicIcon">🎵</span>
+      <span id="musicText">Music On</span>
+    </div>
     <div class="container">
       <div class="header">
         <h1>🎮 GAME SPLICE</h1>
@@ -320,6 +364,164 @@
     </div>
 
     <script>
+      // Audio system for background music
+      let audioContext;
+      let masterGain;
+      let musicPlaying = false;
+      let musicOscillators = [];
+      let musicInterval;
+
+      function initAudio() {
+        if (!audioContext) {
+          audioContext = new (window.AudioContext ||
+            window.webkitAudioContext)();
+          masterGain = audioContext.createGain();
+          masterGain.gain.value = 0.08;
+          masterGain.connect(audioContext.destination);
+        }
+      }
+
+      function playBackgroundMusic() {
+        if (musicPlaying) return;
+
+        initAudio();
+        musicPlaying = true;
+
+        const melody = [
+          { freq: 523, duration: 0.25 },
+          { freq: 659, duration: 0.25 },
+          { freq: 784, duration: 0.25 },
+          { freq: 1047, duration: 0.25 },
+          { freq: 784, duration: 0.25 },
+          { freq: 659, duration: 0.25 },
+          { freq: 523, duration: 0.5 },
+          { freq: 0, duration: 0.125 },
+          { freq: 440, duration: 0.25 },
+          { freq: 523, duration: 0.25 },
+          { freq: 659, duration: 0.25 },
+          { freq: 784, duration: 0.25 },
+          { freq: 659, duration: 0.25 },
+          { freq: 523, duration: 0.25 },
+          { freq: 440, duration: 0.5 },
+          { freq: 0, duration: 0.125 },
+
+          { freq: 392, duration: 0.25 },
+          { freq: 440, duration: 0.25 },
+          { freq: 523, duration: 0.25 },
+          { freq: 659, duration: 0.25 },
+          { freq: 523, duration: 0.25 },
+          { freq: 440, duration: 0.25 },
+          { freq: 392, duration: 0.5 },
+          { freq: 0, duration: 0.25 },
+
+          { freq: 349, duration: 0.125 },
+          { freq: 392, duration: 0.125 },
+          { freq: 440, duration: 0.25 },
+          { freq: 523, duration: 0.375 },
+          { freq: 440, duration: 0.125 },
+          { freq: 392, duration: 0.25 },
+          { freq: 349, duration: 0.5 },
+          { freq: 0, duration: 0.25 },
+        ];
+
+        let noteIndex = 0;
+
+        function playNextNote() {
+          if (!musicPlaying) return;
+
+          const note = melody[noteIndex];
+          noteIndex = (noteIndex + 1) % melody.length;
+
+          if (note.freq > 0) {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.type = 'square';
+            oscillator.frequency.setValueAtTime(
+              note.freq,
+              audioContext.currentTime
+            );
+
+            gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+            gainNode.gain.linearRampToValueAtTime(
+              0.06,
+              audioContext.currentTime + 0.01
+            );
+            gainNode.gain.exponentialRampToValueAtTime(
+              0.008,
+              audioContext.currentTime + note.duration
+            );
+
+            oscillator.connect(gainNode);
+            gainNode.connect(masterGain);
+
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + note.duration);
+
+            musicOscillators.push(oscillator);
+          }
+          musicInterval = setTimeout(playNextNote, note.duration * 1000);
+        }
+
+        playNextNote();
+      }
+
+      function stopBackgroundMusic() {
+        musicPlaying = false;
+        musicOscillators.forEach(osc => {
+          try {
+            osc.stop();
+          } catch (e) {}
+        });
+        musicOscillators = [];
+
+        if (musicInterval) {
+          clearTimeout(musicInterval);
+          musicInterval = null;
+        }
+      }
+
+      function toggleMusic() {
+        const musicControl = document.getElementById('musicControl');
+        const musicIcon = document.getElementById('musicIcon');
+        const musicText = document.getElementById('musicText');
+
+        if (musicPlaying) {
+          stopBackgroundMusic();
+          musicControl.classList.add('muted');
+          musicIcon.textContent = '🔇';
+          musicText.textContent = 'Music Off';
+          localStorage.setItem('gameSpliceMusicEnabled', 'false');
+        } else {
+          playBackgroundMusic();
+          musicControl.classList.remove('muted');
+          musicIcon.textContent = '🎵';
+          musicText.textContent = 'Music On';
+          localStorage.setItem('gameSpliceMusicEnabled', 'true');
+        }
+      }
+
+      // Initialize music state from localStorage
+      document.addEventListener('DOMContentLoaded', () => {
+        const musicEnabled = localStorage.getItem('gameSpliceMusicEnabled');
+        if (musicEnabled === null || musicEnabled === 'true') {
+          // Auto-start music after user interaction
+          document.addEventListener('click', initAudio, { once: true });
+          setTimeout(() => {
+            if (!musicPlaying) {
+              playBackgroundMusic();
+            }
+          }, 1000);
+        } else {
+          const musicControl = document.getElementById('musicControl');
+          const musicIcon = document.getElementById('musicIcon');
+          const musicText = document.getElementById('musicText');
+          musicControl.classList.add('muted');
+          musicIcon.textContent = '🔇';
+          musicText.textContent = 'Music Off';
+        }
+      });
+
       // Mouse glow effect
       const mouseGlow = document.getElementById('mouseGlow');
 
