@@ -147,6 +147,150 @@
       const scoreElement = document.getElementById('score');
       const linesElement = document.getElementById('lines');
 
+      let audioContext;
+      let masterGain;
+
+      function initAudio() {
+        if (!audioContext) {
+          audioContext = new (window.AudioContext ||
+            window.webkitAudioContext)();
+          masterGain = audioContext.createGain();
+          masterGain.gain.value = 0.3;
+          masterGain.connect(audioContext.destination);
+        }
+      }
+
+      function playMoveSound() {
+        initAudio();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(220, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(
+          200,
+          audioContext.currentTime + 0.08
+        );
+
+        gainNode.gain.setValueAtTime(0.04, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(
+          0.01,
+          audioContext.currentTime + 0.08
+        );
+
+        oscillator.connect(gainNode);
+        gainNode.connect(masterGain);
+
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.08);
+      }
+
+      function playRotateSound() {
+        initAudio();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(330, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(
+          350,
+          audioContext.currentTime + 0.12
+        );
+
+        gainNode.gain.setValueAtTime(0.06, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(
+          0.01,
+          audioContext.currentTime + 0.12
+        );
+
+        oscillator.connect(gainNode);
+        gainNode.connect(masterGain);
+
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.12);
+      }
+
+      function playDropSound() {
+        initAudio();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(150, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(
+          120,
+          audioContext.currentTime + 0.2
+        );
+
+        gainNode.gain.setValueAtTime(0.08, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(
+          0.01,
+          audioContext.currentTime + 0.2
+        );
+
+        oscillator.connect(gainNode);
+        gainNode.connect(masterGain);
+
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.2);
+      }
+
+      function playLineClearSound() {
+        initAudio();
+        const frequencies = [523, 659, 784, 1047];
+
+        frequencies.forEach((freq, index) => {
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+
+          oscillator.type = 'sine';
+          oscillator.frequency.setValueAtTime(
+            freq,
+            audioContext.currentTime + index * 0.08
+          );
+
+          gainNode.gain.setValueAtTime(
+            0.2,
+            audioContext.currentTime + index * 0.08
+          );
+          gainNode.gain.exponentialRampToValueAtTime(
+            0.01,
+            audioContext.currentTime + index * 0.08 + 0.3
+          );
+
+          oscillator.connect(gainNode);
+          gainNode.connect(masterGain);
+
+          oscillator.start(audioContext.currentTime + index * 0.08);
+          oscillator.stop(audioContext.currentTime + index * 0.08 + 0.3);
+        });
+      }
+
+      function playGameOverSound() {
+        initAudio();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.type = 'triangle';
+        oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(
+          150,
+          audioContext.currentTime + 1.0
+        );
+
+        gainNode.gain.setValueAtTime(0.25, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(
+          0.01,
+          audioContext.currentTime + 1.0
+        );
+
+        oscillator.connect(gainNode);
+        gainNode.connect(masterGain);
+
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 1.0);
+      }
+
       const COLS = 10;
       const ROWS = 16;
       const BLOCK_SIZE = 30;
@@ -251,6 +395,7 @@
           lines = 0;
           scoreElement.textContent = score;
           linesElement.textContent = lines;
+          playGameOverSound();
         }
       }
 
@@ -288,7 +433,7 @@
         return false;
       }
 
-      function mergr() {
+      function merge() {
         for (let row = 0; row < currentPiece.shape.length; row++) {
           for (let col = 0; col < currentPiece.shape[row].length; col++) {
             if (currentPiece.shape[row][col]) {
@@ -309,6 +454,7 @@
             score += 100;
             linesElement.textContent = lines;
             scoreElement.textContent = score;
+            playLineClearSound();
             row++;
           }
         }
@@ -386,6 +532,7 @@
           if (collision()) {
             currentPiece.y--;
             merge();
+            playDropSound();
             createPiece();
           }
           dropTime = 0;
@@ -400,12 +547,16 @@
             currentPiece.x--;
             if (collision()) {
               currentPiece.x++;
+            } else {
+              playMoveSound();
             }
             break;
           case 'ArrowRight':
             currentPiece.x++;
             if (collision()) {
               currentPiece.x--;
+            } else {
+              playMoveSound();
             }
             break;
           case 'ArrowDown':
@@ -413,7 +564,10 @@
             if (collision()) {
               currentPiece.y--;
               merge();
+              playDropSound();
               createPiece();
+            } else {
+              playMoveSound();
             }
             break;
           case 'ArrowUp':
@@ -421,12 +575,17 @@
             currentPiece.shape = rotatePiece(currentPiece.shape);
             if (collision()) {
               currentPiece.shape = originalShape;
+            } else {
+              playRotateSound();
             }
             break;
         }
       });
       createPiece();
       update();
+
+      document.addEventListener('click', initAudio, { once: true });
+      document.addEventListener('keydown', initAudio, { once: true });
     </script>
   </body>
 </html>
