@@ -210,6 +210,201 @@
       const levelElement = document.getElementById('level');
       const gameOverElement = document.getElementById('gameOver');
       const finalScoreElement = document.getElementById('finalScore');
+
+      let audioContext;
+      let masterGain;
+
+      function initAudio() {
+        try {
+          audioContext = new (window.AudioContext ||
+            window.webkitAudioContext)();
+          masterGain = audioContext.createGain();
+          masterGain.gain.value = 0.3;
+          masterGain.connect(audioContext.destination);
+        } catch (e) {
+          console.log('Web Audio API not supported');
+        }
+      }
+
+      function playDotSound() {
+        if (!audioContext) return;
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(masterGain);
+        oscillator.type = 'square';
+        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(
+          400,
+          audioContext.currentTime + 0.1
+        );
+        gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(
+          0.01,
+          audioContext.currentTime + 0.1
+        );
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.1);
+      }
+
+      function playPowerPelletSound() {
+        if (!audioContext) return;
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        const filter = audioContext.createBiquadFilter();
+        oscillator.connect(filter);
+        filter.connect(gainNode);
+        gainNode.connect(masterGain);
+        oscillator.type = 'sawtooth';
+        oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(
+          600,
+          audioContext.currentTime + 0.3
+        );
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(1000, audioContext.currentTime);
+        filter.frequency.exponentialRampToValueAtTime(
+          2000,
+          audioContext.currentTime + 0.3
+        );
+
+        gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(
+          0.01,
+          audioContext.currentTime + 0.3
+        );
+
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.3);
+      }
+
+      function playGhostEatSound() {
+        if (!audioContext) return;
+        const notes = [523.25, 659.25, 783.99, 1046.5];
+        notes.forEach((freq, index) => {
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+          oscillator.connect(gainNode);
+          gainNode.connect(masterGain);
+          oscillator.type = 'sine';
+          oscillator.frequency.setValueAtTime(
+            freq,
+            audioContext.currentTime + index * 0.08
+          );
+          gainNode.gain.setValueAtTime(
+            0.15,
+            audioContext.currentTime + index * 0.08
+          );
+          gainNode.gain.exponentialRampToValueAtTime(
+            0.01,
+            audioContext.currentTime + index * 0.08 + 0.2
+          );
+          oscillator.start(audioContext.currentTime + index * 0.08);
+          oscillator.stop(audioContext.currentTime + index * 0.08 + 0.2);
+        });
+      }
+
+      function playDeathSound() {
+        if (!audioContext) return;
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        const filter = audioContext.createBiquadFilter();
+        oscillator.connect(filter);
+        filter.connect(gainNode);
+        gainNode.connect(masterGain);
+        oscillator.type = 'sawtooth';
+        oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(
+          100,
+          audioContext.currentTime + 0.8
+        );
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(1500, audioContext.currentTime);
+        filter.frequency.exponentialRampToValueAtTime(
+          200,
+          audioContext.currentTime + 0.8
+        );
+
+        gainNode.gain.setValueAtTime(0.25, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(
+          0.01,
+          audioContext.currentTime + 0.8
+        );
+
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.8);
+      }
+
+      function playLevelCompleteSound() {
+        if (!audioContext) return;
+        const melody = [
+          523.25, 587.33, 659.25, 698.46, 783.99, 880.0, 987.77, 1046.5,
+        ];
+
+        melody.forEach((freq, index) => {
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+          oscillator.connect(gainNode);
+          gainNode.connect(masterGain);
+          oscillator.type = 'triangle';
+          oscillator.frequency.setValueAtTime(
+            freq,
+            audioContext.currentTime + index * 0.1
+          );
+
+          gainNode.gain.setValueAtTime(
+            0.12,
+            audioContext.currentTime + index * 0.1
+          );
+          gainNode.gain.exponentialRampToValueAtTime(
+            0.01,
+            audioContext.currentTime + index * 0.1 + 0.3
+          );
+
+          oscillator.start(audioContext.currentTime + index * 0.1);
+          oscillator.stop(audioContext.currentTime + index * 0.1 + 0.3);
+        });
+      }
+
+      function playGameOverSound() {
+        if (!audioContext) return;
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(masterGain);
+        oscillator.type = 'triangle';
+        oscillator.frequency.setValueAtTime(300, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(
+          150,
+          audioContext.currentTime + 1.5
+        );
+
+        gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(
+          0.01,
+          audioContext.currentTime + 1.5
+        );
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 1.5);
+      }
+
+      let audioInitialized = false;
+      document.addEventListener('click', () => {
+        if (!audioInitialized) {
+          initAudio();
+          audioInitialized = true;
+        }
+      });
+
+      document.addEventListener('keydown', () => {
+        if (!audioInitialized) {
+          initAudio();
+          audioInitialized = true;
+        }
+      });
+
       const CELL_SIZE = 20;
       const COLS = canvas.width / CELL_SIZE;
       const ROWS = 23;
@@ -401,13 +596,16 @@
             maze[player.y][player.x] = 0;
             score += 10;
             dotsEaten++;
+            playDotSound();
           } else if (maze[player.y][player.x] === 3) {
             maze[player.y][player.x] = 0;
             score += 50;
             dotsEaten++;
+            playPowerPelletSound();
             activatePowerMode();
           }
           if (dotsEaten >= totalDots) {
+            playLevelCompleteSound();
             nextLevel();
           }
         }
@@ -447,11 +645,13 @@
           if (ghost.x === player.x && ghost.y === player.y) {
             if (powerMode && ghost.vulnerable) {
               score += 200;
+              playGhostEatSound();
               ghost.x = 14;
               ghost.y = 9;
               ghost.vulnerable = false;
             } else {
               lives--;
+              playDeathSound();
               resetPositions();
               if (lives <= 0) {
                 gameOver();
@@ -510,6 +710,7 @@
 
       function gameOver() {
         gameRunning = false;
+        playGameOverSound();
         finalScoreElement.textContent = score;
         gameOverElement.style.display = 'block';
       }
