@@ -20,6 +20,7 @@ backup-*
 *secret*
 *token*
 *.env
+firebase-config.js
 
 # Logs
 *.log

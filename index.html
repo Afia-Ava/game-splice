@@ -13,6 +13,11 @@
     <meta name="timestamp" content="<?php echo time(); ?>" />
     <meta name="cache-buster" content="v6.0-FRESH-FILE-2025" />
     <meta name="last-modified" content="2025-08-03-completely-fresh" />
+
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
     <style>
       * {
         margin: 0;
@@ -264,6 +269,211 @@
         opacity: 1;
       }
 
+      .user-control {
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        background: black;
+        color: white;
+        border: 2px solid white;
+        padding: 10px 15px;
+        font-family: 'Courier New', monospace;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        z-index: 1001;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .user-control:hover {
+        background: white;
+        color: black;
+        border: 2px solid black;
+      }
+
+      .leaderboard-btn {
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        background: black;
+        color: white;
+        border: 2px solid white;
+        padding: 8px 12px;
+        font-family: 'Courier New', monospace;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        z-index: 1001;
+        font-size: 0.8rem;
+      }
+
+      .leaderboard-btn:hover {
+        background: white;
+        color: black;
+        border: 2px solid black;
+      }
+
+      .modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 2000;
+      }
+
+      .modal-content {
+        background: black;
+        border: 2px solid white;
+        padding: 30px;
+        max-width: 900px;
+        width: 95%;
+        max-height: 80vh;
+        overflow-y: auto;
+        font-family: 'Courier New', monospace;
+      }
+
+      .modal h2 {
+        color: #00ff00;
+        text-align: center;
+        margin-bottom: 20px;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+      }
+
+      .form-group {
+        margin-bottom: 15px;
+      }
+
+      .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        text-transform: uppercase;
+        font-weight: bold;
+      }
+
+      .form-group input {
+        width: 100%;
+        padding: 10px;
+        background: black;
+        border: 2px solid white;
+        color: white;
+        font-family: 'Courier New', monospace;
+      }
+
+      .form-group input:focus {
+        outline: none;
+        border-color: #00ff00;
+      }
+
+      .btn {
+        background: black;
+        color: white;
+        border: 2px solid white;
+        padding: 10px 20px;
+        font-family: 'Courier New', monospace;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin: 5px;
+      }
+
+      .btn:hover {
+        background: white;
+        color: black;
+        border: 2px solid black;
+      }
+
+      .btn:disabled {
+        background: #333;
+        color: #666;
+        border-color: #666;
+        cursor: not-allowed;
+      }
+
+      .leaderboard-list {
+        list-style: none;
+        padding: 0;
+      }
+
+      .leaderboard-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px;
+        border: 1px solid white;
+        margin-bottom: 5px;
+        background: #111;
+      }
+
+      .leaderboard-rank {
+        font-weight: bold;
+        color: #ffff00;
+        min-width: 30px;
+      }
+
+      .leaderboard-name {
+        flex-grow: 1;
+        margin-left: 15px;
+      }
+
+      .leaderboard-score {
+        font-weight: bold;
+        color: #00ff00;
+      }
+
+      .game-tabs {
+        display: flex;
+        margin-bottom: 20px;
+        flex-wrap: nowrap;
+        gap: 3px;
+        overflow-x: auto;
+        padding-bottom: 5px;
+      }
+
+      .tab-btn {
+        background: #333;
+        color: white;
+        border: 2px solid #666;
+        padding: 8px 12px;
+        font-family: 'Courier New', monospace;
+        font-size: 0.7rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+        min-width: fit-content;
+      }
+
+      .tab-btn.active {
+        background: black;
+        border-color: white;
+        color: white;
+      }
+
+      .close-btn {
+        position: absolute;
+        top: 10px;
+        right: 15px;
+        background: none;
+        border: none;
+        color: white;
+        font-size: 1.5rem;
+        cursor: pointer;
+      }
+
       @media (max-width: 768px) {
         .header h1 {
           font-size: 2rem;
@@ -281,6 +491,109 @@
     <div class="music-control" id="musicControl" onclick="toggleMusic()">
       <span id="musicIcon">🎵</span>
       <span id="musicText">Music On</span>
+    </div>
+    <div class="user-control" id="userControl" onclick="showAuthModal()">
+      <span id="userIcon">👤</span>
+      <span id="userText">Login</span>
+    </div>
+    <div class="leaderboard-btn" onclick="showLeaderboard()">
+      🏆 Leaderboard
+    </div>
+
+    <!-- Authentication Modal -->
+    <div class="modal" id="authModal">
+      <div class="modal-content">
+        <button class="close-btn" onclick="closeModal('authModal')">
+          &times;
+        </button>
+        <h2 id="authTitle">Login</h2>
+        <div id="authForm">
+          <div class="form-group">
+            <label for="email">Email:</label>
+            <input type="email" id="email" required />
+          </div>
+          <div class="form-group">
+            <label for="password">Password:</label>
+            <input type="password" id="password" required />
+          </div>
+          <div class="form-group" id="usernameGroup" style="display: none">
+            <label for="username">Username:</label>
+            <input type="text" id="username" maxlength="20" />
+          </div>
+          <button class="btn" id="authBtn" onclick="handleAuth()">Login</button>
+          <button class="btn" id="toggleAuthBtn" onclick="toggleAuthMode()">
+            Need an account? Sign Up
+          </button>
+          <button
+            class="btn"
+            id="logoutBtn"
+            onclick="logout()"
+            style="display: none"
+          >
+            Logout
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Leaderboard Modal -->
+    <div class="modal" id="leaderboardModal">
+      <div class="modal-content">
+        <button class="close-btn" onclick="closeModal('leaderboardModal')">
+          &times;
+        </button>
+        <h2>🏆 Global Leaderboards</h2>
+        <button
+          class="btn"
+          onclick="refreshCurrentLeaderboard()"
+          style="
+            float: right;
+            margin-bottom: 10px;
+            font-size: 0.8rem;
+            padding: 5px 10px;
+          "
+        >
+          🔄 Refresh
+        </button>
+        <div style="clear: both"></div>
+        <div class="game-tabs">
+          <button class="tab-btn active" onclick="showGameLeaderboard('snake')">
+            Snake
+          </button>
+          <button class="tab-btn" onclick="showGameLeaderboard('tetris')">
+            Tetris
+          </button>
+          <button
+            class="tab-btn"
+            onclick="showGameLeaderboard('spacedefender')"
+          >
+            Space
+          </button>
+          <button class="tab-btn" onclick="showGameLeaderboard('jumpasaurus')">
+            Dino
+          </button>
+          <button class="tab-btn" onclick="showGameLeaderboard('dotmuncher')">
+            Pac
+          </button>
+          <button class="tab-btn" onclick="showGameLeaderboard('speedracer')">
+            Race
+          </button>
+          <button class="tab-btn" onclick="showGameLeaderboard('skynavigator')">
+            Bird
+          </button>
+          <button class="tab-btn" onclick="showGameLeaderboard('memorymaster')">
+            Memory
+          </button>
+          <button class="tab-btn" onclick="showGameLeaderboard('sudoku')">
+            Sudoku
+          </button>
+        </div>
+        <div id="leaderboardContent">
+          <ul class="leaderboard-list" id="leaderboardList">
+            <!-- Leaderboard entries will be populated here -->
+          </ul>
+        </div>
+      </div>
     </div>
     <div class="container">
       <div class="header">
@@ -364,7 +677,376 @@
     </div>
 
     <script>
-      // Audio system for background music
+      if (typeof window.firebaseConfig === 'undefined') {
+        console.error(
+          'Firebase configuration not loaded. Please check firebase-config.js'
+        );
+        alert('Firebase configuration error. Please check the setup.');
+      }
+
+      let auth, db;
+      try {
+        firebase.initializeApp(window.firebaseConfig);
+        auth = firebase.auth();
+        db = firebase.firestore();
+        console.log('Firebase initialized successfully');
+      } catch (error) {
+        console.error('Firebase initialization error:', error);
+        alert(
+          'Firebase initialization failed. Please check your configuration.'
+        );
+      }
+
+      let currentUser = null;
+      let isLogin = true;
+
+      auth.onAuthStateChanged(user => {
+        if (user) {
+          currentUser = user;
+          updateUserUI(user);
+        } else {
+          currentUser = null;
+          updateUserUI(null);
+        }
+      });
+
+      function updateUserUI(user) {
+        const userIcon = document.getElementById('userIcon');
+        const userText = document.getElementById('userText');
+
+        if (user) {
+          userIcon.textContent = '👤';
+          userText.textContent = user.displayName || user.email.split('@')[0];
+        } else {
+          userIcon.textContent = '👤';
+          userText.textContent = 'Login';
+        }
+      }
+
+      function showAuthModal() {
+        if (currentUser) {
+          showUserProfile();
+        } else {
+          document.getElementById('authModal').style.display = 'flex';
+        }
+      }
+
+      function showUserProfile() {
+        const modal = document.getElementById('authModal');
+        const authTitle = document.getElementById('authTitle');
+        const authBtn = document.getElementById('authBtn');
+        const toggleAuthBtn = document.getElementById('toggleAuthBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+
+        authTitle.textContent = 'User Profile';
+        authBtn.style.display = 'none';
+        toggleAuthBtn.style.display = 'none';
+        logoutBtn.style.display = 'block';
+
+        document.getElementById('email').parentElement.style.display = 'none';
+        document.getElementById('password').parentElement.style.display =
+          'none';
+        document.getElementById('usernameGroup').style.display = 'none';
+
+        modal.style.display = 'flex';
+      }
+
+      function toggleAuthMode() {
+        isLogin = !isLogin;
+        const authTitle = document.getElementById('authTitle');
+        const authBtn = document.getElementById('authBtn');
+        const toggleAuthBtn = document.getElementById('toggleAuthBtn');
+        const usernameGroup = document.getElementById('usernameGroup');
+
+        if (isLogin) {
+          authTitle.textContent = 'Login';
+          authBtn.textContent = 'Login';
+          toggleAuthBtn.textContent = 'Need an account? Sign Up';
+          usernameGroup.style.display = 'none';
+        } else {
+          authTitle.textContent = 'Sign Up';
+          authBtn.textContent = 'Sign Up';
+          toggleAuthBtn.textContent = 'Have an account? Login';
+          usernameGroup.style.display = 'block';
+        }
+      }
+
+      async function handleAuth() {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const username = document.getElementById('username').value;
+
+        if (!email || !password) {
+          alert('Please fill in all required fields');
+          return;
+        }
+
+        try {
+          if (isLogin) {
+            await auth.signInWithEmailAndPassword(email, password);
+          } else {
+            if (!username) {
+              alert('Please enter a username');
+              return;
+            }
+            const userCredential = await auth.createUserWithEmailAndPassword(
+              email,
+              password
+            );
+
+            await userCredential.user.updateProfile({
+              displayName: username,
+            });
+
+            await db.collection('users').doc(userCredential.user.uid).set({
+              username: username,
+              email: email,
+              createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            });
+          }
+
+          closeModal('authModal');
+          resetAuthForm();
+        } catch (error) {
+          alert('Authentication error: ' + error.message);
+        }
+      }
+
+      async function logout() {
+        try {
+          await auth.signOut();
+          closeModal('authModal');
+          resetAuthForm();
+        } catch (error) {
+          alert('Logout error: ' + error.message);
+        }
+      }
+
+      function resetAuthForm() {
+        document.getElementById('email').value = '';
+        document.getElementById('password').value = '';
+        document.getElementById('username').value = '';
+        isLogin = true;
+        const authTitle = document.getElementById('authTitle');
+        const authBtn = document.getElementById('authBtn');
+        const toggleAuthBtn = document.getElementById('toggleAuthBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const usernameGroup = document.getElementById('usernameGroup');
+
+        authTitle.textContent = 'Login';
+        authBtn.textContent = 'Login';
+        authBtn.style.display = 'block';
+        toggleAuthBtn.textContent = 'Need an account? Sign Up';
+        toggleAuthBtn.style.display = 'block';
+        logoutBtn.style.display = 'none';
+        usernameGroup.style.display = 'none';
+
+        document.getElementById('email').parentElement.style.display = 'block';
+        document.getElementById('password').parentElement.style.display =
+          'block';
+      }
+
+      function closeModal(modalId) {
+        document.getElementById(modalId).style.display = 'none';
+        if (modalId === 'authModal') {
+          resetAuthForm();
+        }
+      }
+
+      async function showLeaderboard() {
+        document.getElementById('leaderboardModal').style.display = 'flex';
+        showGameLeaderboard('snake');
+      }
+
+      let currentGameName = 'snake';
+
+      function refreshCurrentLeaderboard() {
+        console.log('Refreshing leaderboard for:', currentGameName);
+        showGameLeaderboard(currentGameName);
+      }
+
+      async function showGameLeaderboard(gameName) {
+        console.log('=== LEADERBOARD DEBUG ===');
+        console.log('Loading leaderboard for:', gameName);
+        console.log('Current user:', currentUser);
+        console.log('Database available:', !!db);
+
+        currentGameName = gameName;
+
+        const tabs = document.querySelectorAll('.tab-btn');
+        tabs.forEach(tab => tab.classList.remove('active'));
+
+        const activeTab = [...tabs].find(
+          tab =>
+            tab.textContent.toLowerCase().includes(gameName.toLowerCase()) ||
+            tab.onclick.toString().includes(`'${gameName}'`)
+        );
+        if (activeTab) {
+          activeTab.classList.add('active');
+        }
+
+        const leaderboardList = document.getElementById('leaderboardList');
+        leaderboardList.innerHTML =
+          '<li style="text-align: center; color: #ffff00;">Loading scores...</li>';
+
+        try {
+          const leaderboardRef = db
+            .collection('leaderboards')
+            .doc(gameName)
+            .collection('scores');
+          console.log('✅ Fetching scores from Firebase...');
+          console.log('Reference path:', `leaderboards/${gameName}/scores`);
+
+          const snapshot = await leaderboardRef
+            .orderBy('score', 'desc')
+            .limit(50)
+            .get();
+
+          console.log('✅ Query completed');
+          console.log('Snapshot size:', snapshot.size);
+          console.log('Snapshot empty:', snapshot.empty);
+
+          leaderboardList.innerHTML = '';
+
+          if (snapshot.empty) {
+            console.log('❌ No scores found for', gameName);
+            leaderboardList.innerHTML =
+              '<li style="text-align: center; color: #ff6666;">No scores yet! Play some games to see scores here.</li>';
+            return;
+          }
+
+          const userBestScores = new Map();
+          snapshot.forEach(doc => {
+            const data = doc.data();
+            const userId = data.userId;
+            const score =
+              typeof data.score === 'number'
+                ? data.score
+                : parseInt(data.score) || 0;
+
+            if (
+              !userBestScores.has(userId) ||
+              score > userBestScores.get(userId).score
+            ) {
+              userBestScores.set(userId, {
+                username: data.username || 'Anonymous',
+                score: score,
+                timestamp: data.timestamp,
+              });
+            }
+          });
+
+          const sortedScores = Array.from(userBestScores.values())
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 10);
+
+          console.log('✅ Processed unique user scores:', sortedScores.length);
+
+          let scoresFound = 0;
+          sortedScores.forEach((data, index) => {
+            console.log(`✅ Score ${index + 1}:`, data);
+            scoresFound++;
+
+            const li = document.createElement('li');
+            li.className = 'leaderboard-item';
+
+            li.innerHTML = `
+              <span class="leaderboard-rank">#${index + 1}</span>
+              <span class="leaderboard-name">${data.username}</span>
+              <span class="leaderboard-score">${data.score}</span>
+            `;
+            leaderboardList.appendChild(li);
+          });
+
+          console.log(
+            `✅ Successfully loaded ${scoresFound} unique user scores for ${gameName}`
+          );
+        } catch (error) {
+          console.error('❌ Error fetching leaderboard:', error);
+          console.error('Error code:', error.code);
+          console.error('Error message:', error.message);
+          leaderboardList.innerHTML =
+            '<li style="text-align: center; color: #ff0000;">Error loading leaderboard: ' +
+            error.message +
+            '</li>';
+        }
+      }
+
+      async function submitScore(gameName, score) {
+        if (!currentUser) {
+          alert('Please login to submit your score!');
+          return;
+        }
+
+        try {
+          const numericScore =
+            typeof score === 'number' ? score : parseInt(score) || 0;
+
+          const existingScoreQuery = await db
+            .collection('leaderboards')
+            .doc(gameName)
+            .collection('scores')
+            .where('userId', '==', currentUser.uid)
+            .orderBy('score', 'desc')
+            .limit(1)
+            .get();
+
+          let shouldSubmit = true;
+          let existingBestScore = 0;
+
+          if (!existingScoreQuery.empty) {
+            const existingDoc = existingScoreQuery.docs[0];
+            const existingData = existingDoc.data();
+            existingBestScore =
+              typeof existingData.score === 'number'
+                ? existingData.score
+                : parseInt(existingData.score) || 0;
+
+            if (numericScore <= existingBestScore) {
+              shouldSubmit = false;
+              console.log(
+                `Score ${numericScore} is not better than existing best ${existingBestScore}`
+              );
+            }
+          }
+
+          if (shouldSubmit) {
+            await db
+              .collection('leaderboards')
+              .doc(gameName)
+              .collection('scores')
+              .add({
+                userId: currentUser.uid,
+                username:
+                  currentUser.displayName || currentUser.email.split('@')[0],
+                score: numericScore,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+              });
+
+            const userRef = db.collection('users').doc(currentUser.uid);
+            const userDoc = await userRef.get();
+            if (userDoc.exists) {
+              const userData = userDoc.data();
+              const personalBests = userData.personalBests || {};
+              personalBests[gameName] = numericScore;
+              await userRef.update({ personalBests: personalBests });
+            }
+
+            alert(
+              `🎉 New high score of ${numericScore} submitted successfully!`
+            );
+          } else {
+            alert(
+              `Good score of ${numericScore}! Your best is still ${existingBestScore}. Keep trying to beat it!`
+            );
+          }
+        } catch (error) {
+          console.error('Error submitting score:', error);
+          alert('Error submitting score. Please try again.');
+        }
+      }
+
+      window.submitScore = submitScore;
       let audioContext;
       let masterGain;
       let musicPlaying = false;
@@ -501,11 +1183,15 @@
         }
       }
 
-      // Initialize music state from localStorage
       document.addEventListener('DOMContentLoaded', () => {
+        if (window.location.hash === '#leaderboard') {
+          setTimeout(() => {
+            showLeaderboard();
+          }, 500);
+        }
+
         const musicEnabled = localStorage.getItem('gameSpliceMusicEnabled');
         if (musicEnabled === null || musicEnabled === 'true') {
-          // Auto-start music after user interaction
           document.addEventListener('click', initAudio, { once: true });
           setTimeout(() => {
             if (!musicPlaying) {
@@ -522,9 +1208,7 @@
         }
       });
 
-      // Mouse glow effect
       const mouseGlow = document.getElementById('mouseGlow');
-
       document.addEventListener('mousemove', e => {
         mouseGlow.style.left = e.clientX + 'px';
         mouseGlow.style.top = e.clientY + 'px';

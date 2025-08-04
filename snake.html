@@ -4,6 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Snake Classic - Game Hub</title>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
     <style>
       * {
         margin: 0;
@@ -111,6 +117,23 @@
         background: rgba(0, 0, 0, 0.6);
         text-align: left;
       }
+
+      .user-status {
+        font-size: 12px;
+        color: #00ff00;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border: 2px solid #00ff00;
+        padding: 10px 15px;
+        background: rgba(0, 0, 0, 0.8);
+        text-align: center;
+      }
+
+      .user-status.not-logged-in {
+        color: #ff6666;
+        border-color: #ff6666;
+      }
     </style>
   </head>
   <body>
@@ -118,7 +141,9 @@
     <canvas id="gameCanvas" width="500" height="500"></canvas>
     <div class="game-info">
       <div class="score">Score: <span id="score">0</span></div>
+      <div id="userStatus" class="user-status not-logged-in">Not Logged In</div>
       <div class="controls">
+        Press any arrow key to start!<br />
         Use arrow keys to move<br />
         • Eat white food<br />
         • Don't hit walls or yourself!
@@ -253,6 +278,8 @@
       let dx = 0;
       let dy = 0;
       let score = 0;
+      let gameRunning = false;
+      let gameInterval;
 
       function randomFood() {
         food = {
@@ -400,11 +427,11 @@
           head.y < 0 ||
           head.y >= tileCount
         ) {
-          resetGame();
+          gameOver();
           return;
         }
         if (snake.some(part => part.x === head.x && part.y === head.y)) {
-          resetGame();
+          gameOver();
           return;
         }
         snake.unshift(head);
@@ -423,6 +450,119 @@
         }
       }
 
+      function gameOver() {
+        console.log('Game Over! Final score:', score);
+        clearInterval(gameInterval);
+        gameRunning = false;
+        playGameOverSound();
+
+        if (score > 0) {
+          console.log('Attempting to submit score:', score);
+          submitScore('snake', score);
+        }
+
+        showGameOverScreen();
+      }
+
+      function showGameOverScreen() {
+        const gameOverDiv = document.createElement('div');
+        gameOverDiv.id = 'gameOverScreen';
+        gameOverDiv.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.9);
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          font-family: 'Courier New', monospace;
+          color: white;
+          z-index: 1000;
+        `;
+
+        gameOverDiv.innerHTML = `
+          <h1 style="font-size: 4rem; color: #ff0000; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 3px;">GAME OVER</h1>
+          <h2 style="font-size: 2rem; color: #00ff00; margin-bottom: 30px;">Final Score: ${score}</h2>
+          <button id="playAgainBtn" style="
+            background: black;
+            color: white;
+            border: 2px solid white;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+          ">Play Again</button>
+          <button id="backToMenuBtn" style="
+            background: black;
+            color: white;
+            border: 2px solid white;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+          ">Back to Menu</button>
+          <button id="viewLeaderboardBtn" style="
+            background: black;
+            color: white;
+            border: 2px solid #00ff00;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+          ">🏆 View Leaderboard</button>
+        `;
+
+        document.body.appendChild(gameOverDiv);
+
+        const playAgainBtn = document.getElementById('playAgainBtn');
+        const backToMenuBtn = document.getElementById('backToMenuBtn');
+        const viewLeaderboardBtn =
+          document.getElementById('viewLeaderboardBtn');
+
+        [playAgainBtn, backToMenuBtn, viewLeaderboardBtn].forEach(btn => {
+          btn.addEventListener('mouseenter', () => {
+            btn.style.background = 'white';
+            btn.style.color = 'black';
+          });
+          btn.addEventListener('mouseleave', () => {
+            btn.style.background = 'black';
+            btn.style.color = 'white';
+          });
+        });
+
+        playAgainBtn.addEventListener('click', () => {
+          document.body.removeChild(gameOverDiv);
+          resetGame();
+          startGame();
+        });
+
+        backToMenuBtn.addEventListener('click', () => {
+          window.location.href = 'index.html';
+        });
+
+        viewLeaderboardBtn.addEventListener('click', () => {
+          window.location.href = 'index.html#leaderboard';
+        });
+      }
+
       function resetGame() {
         snake = [{ x: 10, y: 10 }];
         dx = 0;
@@ -430,14 +570,89 @@
         score = 0;
         scoreElement.textContent = score;
         randomFood();
+        gameRunning = false;
+      }
+
+      async function submitScore(gameName, finalScore) {
+        console.log('=== SCORE SUBMISSION DEBUG ===');
+        console.log('submitScore called with:', gameName, finalScore);
+        console.log('Current user:', currentUser);
+        console.log('Database available:', !!db);
+        console.log('Auth state:', auth.currentUser);
+
+        if (!currentUser || !db) {
+          console.log(
+            '❌ User not logged in or Firebase not available - score not submitted'
+          );
+          alert('Please login on the main page to save your score!');
+          return;
+        }
+
+        try {
+          console.log('✅ Submitting score to Firebase...');
+          const testDoc = await db.collection('test').add({
+            message: 'Hello from Snake game',
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+          });
+          console.log('✅ Test document written:', testDoc.id);
+          const scoreDoc = await db
+            .collection('leaderboards')
+            .doc(gameName)
+            .collection('scores')
+            .add({
+              userId: currentUser.uid,
+              username:
+                currentUser.displayName || currentUser.email.split('@')[0],
+              score: finalScore,
+              timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            });
+
+          console.log('✅ Score document written:', scoreDoc.id);
+          const userRef = db.collection('users').doc(currentUser.uid);
+          const userDoc = await userRef.get();
+
+          if (userDoc.exists) {
+            const userData = userDoc.data();
+            const personalBests = userData.personalBests || {};
+            if (
+              !personalBests[gameName] ||
+              finalScore > personalBests[gameName]
+            ) {
+              personalBests[gameName] = finalScore;
+              await userRef.update({ personalBests: personalBests });
+              console.log('✅ Personal best updated');
+            }
+          }
+
+          console.log('✅ Score submitted successfully:', finalScore);
+          alert(
+            `🎉 Score ${finalScore} submitted successfully! Check the leaderboard on the main page to see your score.`
+          );
+        } catch (error) {
+          console.error('❌ Error submitting score:', error);
+          console.error('Error code:', error.code);
+          console.error('Error message:', error.message);
+          alert('❌ Error submitting score: ' + error.message);
+        }
       }
 
       function gameLoop() {
+        if (!gameRunning) return;
         moveSnake();
         drawGame();
       }
 
+      function startGame() {
+        if (gameRunning) return;
+        gameRunning = true;
+        gameInterval = setInterval(gameLoop, 150);
+      }
+
       document.addEventListener('keydown', e => {
+        if (!gameRunning) {
+          startGame();
+        }
+
         switch (e.key) {
           case 'ArrowUp':
             if (dy !== 1) {
@@ -465,12 +680,48 @@
             break;
         }
       });
+
       randomFood();
-      setInterval(gameLoop, 150);
       drawGame();
 
       document.addEventListener('click', initAudio, { once: true });
       document.addEventListener('keydown', initAudio, { once: true });
+
+      let auth,
+        db,
+        currentUser = null;
+      const userStatusElement = document.getElementById('userStatus');
+
+      if (typeof window.firebaseConfig !== 'undefined') {
+        try {
+          firebase.initializeApp(window.firebaseConfig);
+          auth = firebase.auth();
+          db = firebase.firestore();
+
+          auth.onAuthStateChanged(user => {
+            currentUser = user;
+            updateUserStatus();
+          });
+
+          console.log('Firebase initialized in Snake game');
+        } catch (error) {
+          console.error('Firebase initialization error in Snake game:', error);
+        }
+      } else {
+        console.log('Firebase config not available in Snake game');
+      }
+
+      function updateUserStatus() {
+        if (currentUser) {
+          userStatusElement.textContent = `Logged in: ${
+            currentUser.displayName || currentUser.email.split('@')[0]
+          }`;
+          userStatusElement.className = 'user-status';
+        } else {
+          userStatusElement.textContent = "Not Logged In - Scores Won't Save";
+          userStatusElement.className = 'user-status not-logged-in';
+        }
+      }
     </script>
   </body>
 </html>
