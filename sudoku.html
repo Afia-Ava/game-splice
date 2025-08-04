@@ -10,6 +10,11 @@
     />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
+
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
     <style>
       * {
         margin: 0;
@@ -524,6 +529,12 @@
               ><span id="finalHints">0</span></span
             >
           </div>
+          <div style="margin-bottom: 15px">
+            🏆 Final Score:
+            <span style="color: #00ff00; font-weight: bold; font-size: 1.1rem"
+              ><span id="finalScore">0</span></span
+            >
+          </div>
           <div
             id="newRecord"
             style="
@@ -762,6 +773,31 @@
 
         oscillator.start();
         oscillator.stop(audioContext.currentTime + 0.3);
+      }
+
+      let auth;
+      let db;
+      let currentUser = null;
+      if (typeof firebase !== 'undefined' && window.firebaseConfig) {
+        try {
+          firebase.initializeApp(window.firebaseConfig);
+          auth = firebase.auth();
+          db = firebase.firestore();
+
+          auth.onAuthStateChanged(user => {
+            currentUser = user;
+            console.log(
+              'Sudoku - Auth state changed:',
+              user ? 'logged in' : 'logged out'
+            );
+          });
+
+          console.log('Firebase initialized in Sudoku game');
+        } catch (error) {
+          console.error('Firebase initialization error in Sudoku game:', error);
+        }
+      } else {
+        console.log('Firebase config not available in Sudoku game');
       }
 
       let gameStarted = false;
@@ -1166,9 +1202,124 @@
         }
       }
 
+      async function submitScore(gameName, finalScore) {
+        console.log('=== SCORE SUBMISSION DEBUG ===');
+        console.log('submitScore called with:', gameName, finalScore);
+        console.log('Current user:', currentUser);
+        console.log('Database available:', !!db);
+        console.log(
+          'Auth state:',
+          auth ? 'auth available' : 'auth not available'
+        );
+        console.log('Firebase available:', typeof firebase !== 'undefined');
+
+        if (!currentUser || !db) {
+          console.log(
+            '❌ User not logged in or Firebase not available - score not submitted'
+          );
+          console.log('currentUser:', !!currentUser);
+          console.log('db:', !!db);
+          return;
+        }
+
+        try {
+          console.log('✅ Attempting to submit score to Firebase...');
+          const numericScore =
+            typeof finalScore === 'number'
+              ? finalScore
+              : parseInt(finalScore) || 0;
+
+          console.log('Numeric score:', numericScore);
+          console.log('User ID:', currentUser.uid);
+          console.log(
+            'Username:',
+            currentUser.displayName || currentUser.email?.split('@')[0]
+          );
+
+          const scoreData = {
+            userId: currentUser.uid,
+            username:
+              currentUser.displayName ||
+              currentUser.email?.split('@')[0] ||
+              'Anonymous',
+            score: numericScore,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+          };
+
+          console.log('Score data to submit:', scoreData);
+
+          const scoreDoc = await db
+            .collection('leaderboards')
+            .doc(gameName)
+            .collection('scores')
+            .add(scoreData);
+
+          console.log('✅ Score document written with ID:', scoreDoc.id);
+          const userRef = db.collection('users').doc(currentUser.uid);
+          const userDoc = await userRef.get();
+
+          if (userDoc.exists) {
+            const userData = userDoc.data();
+            const personalBests = userData.personalBests || {};
+
+            if (
+              !personalBests[gameName] ||
+              numericScore > personalBests[gameName]
+            ) {
+              personalBests[gameName] = numericScore;
+              await userRef.update({ personalBests: personalBests });
+              console.log('✅ Personal best updated to:', numericScore);
+            }
+          } else {
+            await userRef.set({
+              personalBests: { [gameName]: numericScore },
+            });
+            console.log(
+              '✅ New user document created with personal best:',
+              numericScore
+            );
+          }
+
+          console.log('✅ Score submitted successfully:', numericScore);
+        } catch (error) {
+          console.error('❌ Error submitting score:', error);
+          console.error('Error code:', error.code);
+          console.error('Error message:', error.message);
+          console.error('Error stack:', error.stack);
+        }
+      }
+
       function gameWon() {
         gameRunning = false;
         clearInterval(timerInterval);
+        playWinSound();
+        let finalScore = score;
+        const completionBonus =
+          basePoints.puzzleComplete * scoreMultipliers[difficulty];
+        finalScore += completionBonus;
+
+        if (errors === 0) {
+          finalScore += basePoints.noErrors * scoreMultipliers[difficulty];
+        }
+
+        if (hintsUsed === 0) {
+          finalScore += basePoints.noHints * scoreMultipliers[difficulty];
+        }
+
+        const speedBonus = Math.max(
+          0,
+          (300 - timer) * basePoints.speedBonus * scoreMultipliers[difficulty]
+        );
+        finalScore += speedBonus;
+
+        finalScore = Math.round(finalScore);
+
+        console.log('=== GAME WON DEBUG ===');
+        console.log('Final score calculated:', finalScore);
+        console.log('User logged in:', !!currentUser);
+        console.log('Firebase available:', !!db);
+
+        submitScore('sudoku', finalScore);
 
         let newRecord = false;
         if (hintsUsed === 0) {
@@ -1184,6 +1335,8 @@
         document.getElementById('finalTime').textContent = timer;
         document.getElementById('finalErrors').textContent = errors;
         document.getElementById('finalHints').textContent = hintsUsed;
+        document.getElementById('finalScore').textContent =
+          finalScore.toLocaleString();
         document.getElementById('newRecord').style.display = newRecord
           ? 'block'
           : 'none';
