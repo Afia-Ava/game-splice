@@ -49,7 +49,7 @@
       }
 
       .container {
-        max-width: 1200px;
+        max-width: 900px;
         margin: 0 auto;
       }
 
@@ -84,8 +84,8 @@
 
       .games-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 30px;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 25px;
         margin-bottom: 50px;
       }
 
@@ -93,7 +93,7 @@
         background: #000000;
         border: 2px solid white;
         border-radius: 0;
-        padding: 30px;
+        padding: 25px;
         text-align: center;
         transition: all 0.3s ease;
         cursor: pointer;
@@ -111,8 +111,8 @@
       }
 
       .game-icon {
-        font-size: 6rem;
-        margin-bottom: 20px;
+        font-size: 5rem;
+        margin-bottom: 15px;
         display: block;
         transition: all 0.3s ease;
       }
@@ -231,7 +231,7 @@
           <h3>Jumpasaurus</h3>
           <p>
             Help the pixelated dinosaur collect food while avoiding dangerous
-            cacti! Features multi-jump mechanics and progressive difficulty.
+            cacti!
           </p>
           <a href="jumpasaurus.html" class="play-btn">Play Now</a>
         </div>
@@ -239,10 +239,8 @@
         <div class="game-card" onclick="playGame('snake.html')">
           <div class="game-icon">🐍</div>
           <h3>Snake Classic</h3>
-          <p>
-            The classic snake game with modern twists! Eat food, grow longer,
-            and don't hit the walls or yourself.
-          </p>
+          <p>The classic snake game with modern twists!</p>
+          <div style="margin-bottom: 25px"></div>
           <a href="snake.html" class="play-btn">Play Now</a>
         </div>
 
@@ -250,8 +248,7 @@
           <div class="game-icon">🧩</div>
           <h3>TETRIS GAME</h3>
           <p>
-            Drop and arrange falling blocks to clear lines in this addictive
-            puzzle game!
+            Drop and arrange falling blocks to clear lines in this puzzle game!
           </p>
           <a href="tetris.html" class="play-btn">Play Now</a>
         </div>
@@ -305,10 +302,20 @@
           </p>
           <a href="memorymaster.html" class="play-btn">Play Now</a>
         </div>
+
+        <div class="game-card" onclick="playGame('sudoku.html')">
+          <div class="game-icon">🔢</div>
+          <h3>Sudoku Solver</h3>
+          <p>
+            Challenge your mind with the classic number puzzle! Fill the grid
+            with numbers 1-9 using logic and strategy.
+          </p>
+          <a href="sudoku.html" class="play-btn">Play Now</a>
+        </div>
       </div>
 
       <div class="footer">
-        <p>More games coming soon! Built with ❤️ for web gaming enthusiasts.</p>
+        <p>Built with ❤️ for web gaming enthusiasts.</p>
       </div>
     </div>
 
