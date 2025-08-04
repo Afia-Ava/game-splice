@@ -10,6 +10,11 @@
     />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
+
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
     <style>
       * {
         margin: 0;
@@ -234,6 +239,26 @@
     </div>
 
     <script>
+      // Firebase configuration check and initialization
+      if (typeof window.firebaseConfig === 'undefined') {
+        console.error('Firebase configuration not loaded. Please check firebase-config.js');
+      }
+
+      let auth, db, currentUser = null;
+      try {
+        firebase.initializeApp(window.firebaseConfig);
+        auth = firebase.auth();
+        db = firebase.firestore();
+        console.log('Firebase initialized successfully in Sky Navigator');
+      } catch (error) {
+        console.error('Firebase initialization error in Sky Navigator:', error);
+      }
+
+      // Auth state listener
+      auth.onAuthStateChanged(user => {
+        currentUser = user;
+      });
+
       const canvas = document.getElementById('gameCanvas');
       const ctx = canvas.getContext('2d');
 
@@ -680,19 +705,14 @@
           newRecord = true;
         }
 
-        document.getElementById('finalScore').textContent = score;
-        document.getElementById('finalDistance').textContent =
-          Math.floor(distance);
-        document.getElementById('newRecord').style.display = newRecord
-          ? 'block'
-          : 'none';
-        document.getElementById('gameOverScreen').style.display = 'block';
-
-        if (newRecord) {
-          playNewRecordSound();
-        } else {
-          playGameOverSound();
+        // Submit score to Firebase if user is logged in
+        if (currentUser && db && score > 0) {
+          console.log('Attempting to submit Sky Navigator score:', score);
+          submitScore('skynavigator', score);
         }
+
+        // Show new game over screen
+        showGameOverScreen(newRecord);
       }
 
       function restartGame() {

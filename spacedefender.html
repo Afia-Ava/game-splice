@@ -10,6 +10,11 @@
     />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
+
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
     <style>
       * {
         margin: 0;
@@ -196,6 +201,31 @@
     </div>
 
     <script>
+      if (typeof window.firebaseConfig === 'undefined') {
+        console.error(
+          'Firebase configuration not loaded. Please check firebase-config.js'
+        );
+      }
+
+      let auth,
+        db,
+        currentUser = null;
+      try {
+        firebase.initializeApp(window.firebaseConfig);
+        auth = firebase.auth();
+        db = firebase.firestore();
+        console.log('Firebase initialized successfully in Space Defender');
+      } catch (error) {
+        console.error(
+          'Firebase initialization error in Space Defender:',
+          error
+        );
+      }
+
+      auth.onAuthStateChanged(user => {
+        currentUser = user;
+      });
+
       const canvas = document.getElementById('gameCanvas');
       const ctx = canvas.getContext('2d');
       let audioContext;
@@ -812,9 +842,26 @@
         gameRunning = false;
         stopBackgroundMusic();
         playGameOverSound();
-        document.getElementById('finalScore').textContent = score;
-        document.getElementById('finalLevel').textContent = level;
-        document.getElementById('gameOverScreen').style.display = 'block';
+
+        if (currentUser && db && score > 0) {
+          console.log('🎮 === SPACE DEFENDER GAME OVER ===');
+          console.log('🎮 Final Score:', score);
+          console.log('🎮 Final Level:', level);
+          console.log('🎮 User logged in:', !!currentUser);
+          console.log('🎮 Database available:', !!db);
+          console.log('🎮 User email:', currentUser?.email);
+          console.log('🎮 User displayName:', currentUser?.displayName);
+          console.log('🎮 Attempting to submit Space Defender score:', score);
+          submitScore('spacedefender', score);
+        } else {
+          console.log('🎮 === SPACE DEFENDER GAME OVER (NO SUBMISSION) ===');
+          console.log('🎮 Score:', score);
+          console.log('🎮 User logged in:', !!currentUser);
+          console.log('🎮 Database available:', !!db);
+          console.log('🎮 Score > 0:', score > 0);
+        }
+
+        showGameOverScreen();
       }
 
       function restartGame() {
@@ -831,7 +878,11 @@
         enemySpawnTimer = 0;
         powerUpSpawnTimer = 0;
         bulletCooldown = 0;
-        document.getElementById('gameOverScreen').style.display = 'none';
+
+        const existingGameOver = document.getElementById('gameOverScreen');
+        if (existingGameOver) {
+          existingGameOver.remove();
+        }
 
         if (audioContext) {
           startBackgroundMusic();
@@ -880,6 +931,189 @@
         drawUI();
         requestAnimationFrame(gameLoop);
       }
+
+      function showGameOverScreen() {
+        const existingGameOver = document.getElementById('gameOverScreen');
+        if (existingGameOver) {
+          existingGameOver.remove();
+        }
+
+        const gameOverDiv = document.createElement('div');
+        gameOverDiv.id = 'gameOverScreen';
+        gameOverDiv.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.9);
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          font-family: 'Courier New', monospace;
+          color: white;
+          z-index: 1000;
+        `;
+
+        gameOverDiv.innerHTML = `
+          <h1 style="font-size: 4rem; color: #ff0000; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 3px;">GAME OVER</h1>
+          <h2 style="font-size: 2rem; color: #00ff00; margin-bottom: 10px;">Final Score: ${score}</h2>
+          <h3 style="font-size: 1.5rem; color: #ffff00; margin-bottom: 30px;">Level Reached: ${level}</h3>
+          <button id="playAgainBtn" style="
+            background: black;
+            color: white;
+            border: 2px solid white;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+          ">🚀 Play Again</button>
+          <button id="backToMenuBtn" style="
+            background: black;
+            color: white;
+            border: 2px solid white;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+          ">🏠 Back to Menu</button>
+          <button id="viewLeaderboardBtn" style="
+            background: black;
+            color: white;
+            border: 2px solid #00ff00;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+          ">🏆 View Leaderboard</button>
+        `;
+
+        document.body.appendChild(gameOverDiv);
+        const playAgainBtn = document.getElementById('playAgainBtn');
+        const backToMenuBtn = document.getElementById('backToMenuBtn');
+        const viewLeaderboardBtn =
+          document.getElementById('viewLeaderboardBtn');
+
+        [playAgainBtn, backToMenuBtn, viewLeaderboardBtn].forEach(btn => {
+          btn.addEventListener('mouseenter', () => {
+            btn.style.background = 'white';
+            btn.style.color = 'black';
+          });
+          btn.addEventListener('mouseleave', () => {
+            btn.style.background = 'black';
+            btn.style.color = 'white';
+          });
+        });
+
+        playAgainBtn.addEventListener('click', () => {
+          document.body.removeChild(gameOverDiv);
+          restartGame();
+        });
+
+        backToMenuBtn.addEventListener('click', () => {
+          window.location.href = 'index.html';
+        });
+
+        viewLeaderboardBtn.addEventListener('click', () => {
+          window.location.href = 'index.html#leaderboard';
+        });
+      }
+
+      async function submitScore(gameName, finalScore) {
+        console.log('=== SPACE DEFENDER SCORE SUBMISSION DEBUG ===');
+        console.log('submitScore called with:', gameName, finalScore);
+        console.log('Current user:', currentUser);
+        console.log('Database available:', !!db);
+        console.log('Auth state:', auth.currentUser);
+
+        if (!currentUser || !db) {
+          console.log(
+            '❌ User not logged in or Firebase not available - score not submitted'
+          );
+          return;
+        }
+
+        try {
+          console.log('✅ Submitting Space Defender score to Firebase...');
+          const numericScore =
+            typeof finalScore === 'number'
+              ? finalScore
+              : parseInt(finalScore) || 0;
+
+          const scoreDoc = await db
+            .collection('leaderboards')
+            .doc(gameName)
+            .collection('scores')
+            .add({
+              userId: currentUser.uid,
+              username:
+                currentUser.displayName || currentUser.email.split('@')[0],
+              score: numericScore,
+              level: level,
+              timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            });
+
+          console.log('✅ Space Defender score document written:', scoreDoc.id);
+
+          const userRef = db.collection('users').doc(currentUser.uid);
+          const userDoc = await userRef.get();
+          if (userDoc.exists) {
+            const userData = userDoc.data();
+            const personalBests = userData.personalBests || {};
+
+            if (
+              !personalBests[gameName] ||
+              numericScore > personalBests[gameName]
+            ) {
+              await userRef.update({
+                [`personalBests.${gameName}`]: numericScore,
+              });
+              console.log(
+                '✅ Updated personal best for Space Defender:',
+                numericScore
+              );
+            }
+          } else {
+            await userRef.set({
+              email: currentUser.email,
+              username:
+                currentUser.displayName || currentUser.email.split('@')[0],
+              personalBests: {
+                [gameName]: numericScore,
+              },
+            });
+            console.log(
+              '✅ Created user document with Space Defender score:',
+              numericScore
+            );
+          }
+
+          console.log(
+            '✅ Space Defender score submission completed successfully'
+          );
+        } catch (error) {
+          console.error('❌ Error submitting Space Defender score:', error);
+          console.error('Error code:', error.code);
+          console.error('Error message:', error.message);
+        }
+      }
+
       gameLoop();
     </script>
   </body>

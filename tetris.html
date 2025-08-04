@@ -747,7 +747,6 @@
         try {
           console.log('✅ Submitting score to Firebase...');
 
-          // Always submit the score (no checking for better scores)
           const numericScore =
             typeof finalScore === 'number'
               ? finalScore
@@ -768,7 +767,6 @@
 
           console.log('✅ Score document written:', scoreDoc.id);
 
-          // Update user's personal best if this score is higher
           const userRef = db.collection('users').doc(currentUser.uid);
           const userDoc = await userRef.get();
 
@@ -785,7 +783,6 @@
               console.log('✅ Personal best updated to:', numericScore);
             }
           } else {
-            // Create user document if it doesn't exist
             await userRef.set({
               personalBests: { [gameName]: numericScore },
             });

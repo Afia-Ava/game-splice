@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Snake Classic - Game Hub</title>
 
-    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -589,8 +588,6 @@
 
         try {
           console.log('✅ Submitting score to Firebase...');
-
-          // Always submit the score (no checking for better scores)
           const numericScore =
             typeof finalScore === 'number'
               ? finalScore
@@ -610,7 +607,6 @@
 
           console.log('✅ Score document written:', scoreDoc.id);
 
-          // Update user's personal best if this score is higher
           const userRef = db.collection('users').doc(currentUser.uid);
           const userDoc = await userRef.get();
 
@@ -627,7 +623,6 @@
               console.log('✅ Personal best updated to:', numericScore);
             }
           } else {
-            // Create user document if it doesn't exist
             await userRef.set({
               personalBests: { [gameName]: numericScore },
             });
