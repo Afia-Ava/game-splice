@@ -80,6 +80,252 @@
     <script>
       const canvas = document.getElementById('gameCanvas');
       const ctx = canvas.getContext('2d');
+      let audioContext;
+      let masterGain;
+      let musicGain;
+      let gameRunning = true;
+
+      function initAudio() {
+        try {
+          audioContext = new (window.AudioContext ||
+            window.webkitAudioContext)();
+          masterGain = audioContext.createGain();
+          masterGain.gain.value = 0.4;
+          masterGain.connect(audioContext.destination);
+          musicGain = audioContext.createGain();
+          musicGain.gain.value = 0.2;
+          musicGain.connect(masterGain);
+        } catch (e) {
+          console.log('Web Audio API not supported');
+        }
+      }
+
+      function playBackgroundMusic() {
+        if (!audioContext || !gameRunning) return;
+
+        const melody1 = audioContext.createOscillator();
+        const melody2 = audioContext.createOscillator();
+        const bass = audioContext.createOscillator();
+        const filter1 = audioContext.createBiquadFilter();
+        const filter2 = audioContext.createBiquadFilter();
+        const filterBass = audioContext.createBiquadFilter();
+        const gain1 = audioContext.createGain();
+        const gain2 = audioContext.createGain();
+        const gainBass = audioContext.createGain();
+
+        melody1.type = 'sine';
+        melody2.type = 'triangle';
+        bass.type = 'sawtooth';
+
+        const notes1 = [523.25, 587.33, 659.25, 698.46];
+        const notes2 = [392.0, 440.0, 493.88, 523.25];
+        const bassNotes = [130.81, 146.83, 164.81, 174.61];
+
+        let noteIndex = 0;
+        const startTime = audioContext.currentTime;
+
+        function playNote(osc, notes, delay, duration) {
+          const note = notes[noteIndex % notes.length];
+          osc.frequency.setValueAtTime(note, startTime + delay);
+          osc.frequency.setValueAtTime(
+            note * 1.05,
+            startTime + delay + duration * 0.1
+          );
+          osc.frequency.setValueAtTime(
+            note,
+            startTime + delay + duration * 0.2
+          );
+        }
+
+        playNote(melody1, notes1, 0, 0.5);
+        playNote(melody2, notes2, 0.25, 0.5);
+        playNote(bass, bassNotes, 0, 1);
+
+        filter1.type = 'lowpass';
+        filter1.frequency.setValueAtTime(2000, audioContext.currentTime);
+        filter2.type = 'lowpass';
+        filter2.frequency.setValueAtTime(1500, audioContext.currentTime);
+        filterBass.type = 'lowpass';
+        filterBass.frequency.setValueAtTime(800, audioContext.currentTime);
+
+        gain1.gain.setValueAtTime(0.15, audioContext.currentTime);
+        gain2.gain.setValueAtTime(0.12, audioContext.currentTime);
+        gainBass.gain.setValueAtTime(0.08, audioContext.currentTime);
+
+        melody1.connect(filter1);
+        filter1.connect(gain1);
+        gain1.connect(musicGain);
+
+        melody2.connect(filter2);
+        filter2.connect(gain2);
+        gain2.connect(musicGain);
+
+        bass.connect(filterBass);
+        filterBass.connect(gainBass);
+        gainBass.connect(musicGain);
+
+        const now = audioContext.currentTime;
+        melody1.start(now);
+        melody2.start(now);
+        bass.start(now);
+
+        melody1.stop(now + 4);
+        melody2.stop(now + 4);
+        bass.stop(now + 4);
+
+        setTimeout(() => {
+          if (gameRunning && audioContext) {
+            playBackgroundMusic();
+          }
+        }, 4000);
+      }
+
+      function playJumpSound() {
+        if (!audioContext) return;
+
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        const filter = audioContext.createBiquadFilter();
+
+        oscillator.connect(filter);
+        filter.connect(gainNode);
+        gainNode.connect(masterGain);
+
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(300, audioContext.currentTime);
+        oscillator.frequency.linearRampToValueAtTime(
+          450,
+          audioContext.currentTime + 0.08
+        );
+        oscillator.frequency.linearRampToValueAtTime(
+          200,
+          audioContext.currentTime + 0.15
+        );
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(1200, audioContext.currentTime);
+
+        gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
+        gainNode.gain.linearRampToValueAtTime(
+          0.12,
+          audioContext.currentTime + 0.05
+        );
+        gainNode.gain.exponentialRampToValueAtTime(
+          0.01,
+          audioContext.currentTime + 0.15
+        );
+
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.15);
+      }
+
+      function playFoodSound() {
+        if (!audioContext) return;
+
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(masterGain);
+
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+        oscillator.frequency.setValueAtTime(
+          1000,
+          audioContext.currentTime + 0.05
+        );
+        oscillator.frequency.setValueAtTime(
+          1200,
+          audioContext.currentTime + 0.1
+        );
+
+        gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+        gainNode.gain.setValueAtTime(0.2, audioContext.currentTime + 0.1);
+        gainNode.gain.exponentialRampToValueAtTime(
+          0.01,
+          audioContext.currentTime + 0.15
+        );
+
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.15);
+      }
+
+      function playGameOverSound() {
+        if (!audioContext) return;
+
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        const filter = audioContext.createBiquadFilter();
+
+        oscillator.connect(filter);
+        filter.connect(gainNode);
+        gainNode.connect(masterGain);
+
+        oscillator.type = 'sawtooth';
+        oscillator.frequency.setValueAtTime(300, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(
+          150,
+          audioContext.currentTime + 0.8
+        );
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(1000, audioContext.currentTime);
+        filter.frequency.exponentialRampToValueAtTime(
+          200,
+          audioContext.currentTime + 0.8
+        );
+
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(
+          0.01,
+          audioContext.currentTime + 0.8
+        );
+
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.8);
+      }
+
+      function playThemeToggleSound() {
+        if (!audioContext) return;
+
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(masterGain);
+
+        oscillator.type = 'square';
+        oscillator.frequency.setValueAtTime(600, audioContext.currentTime);
+        oscillator.frequency.setValueAtTime(
+          800,
+          audioContext.currentTime + 0.05
+        );
+
+        gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(
+          0.01,
+          audioContext.currentTime + 0.1
+        );
+
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.1);
+      }
+
+      let audioInitialized = false;
+      document.addEventListener('click', () => {
+        if (!audioInitialized) {
+          initAudio();
+          audioInitialized = true;
+        }
+      });
+
+      document.addEventListener('keydown', () => {
+        if (!audioInitialized) {
+          initAudio();
+          audioInitialized = true;
+        }
+      });
+
       let score = 0;
       let gameTime = 0;
       const dino = {
@@ -297,6 +543,7 @@
             dino.y + dino.height > food.y
           ) {
             score += food.points;
+            playFoodSound();
             foods.splice(i, 1);
             continue;
           }
@@ -317,6 +564,8 @@
             dino.y + dino.height > obstacle.y
           ) {
             gameOver = true;
+            gameRunning = false;
+            playGameOverSound();
             break;
           }
 
@@ -632,6 +881,7 @@
         score = 0;
         gameTime = 0;
         gameOver = false;
+        gameRunning = true;
         foods.length = 0;
         obstacles.length = 0;
         foodSpawnTimer = 0;
@@ -646,6 +896,7 @@
 
       function toggleTheme() {
         darkMode = !darkMode;
+        playThemeToggleSound();
         generateGroundPattern();
       }
 
@@ -654,6 +905,7 @@
           dino.velocityY = dino.jumpPower;
           dino.jumpsRemaining--;
           dino.onGround = false;
+          playJumpSound();
           e.preventDefault();
         }
 

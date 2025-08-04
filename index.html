@@ -48,6 +48,24 @@
         z-index: 1000;
       }
 
+      .mouse-glow {
+        position: fixed;
+        width: 300px;
+        height: 300px;
+        background: radial-gradient(
+          circle,
+          rgba(255, 255, 255, 0.1) 0%,
+          rgba(255, 255, 255, 0.05) 30%,
+          transparent 70%
+        );
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 500;
+        transition: opacity 0.3s ease;
+        opacity: 0;
+        transform: translate(-50%, -50%);
+      }
+
       .container {
         max-width: 900px;
         margin: 0 auto;
@@ -193,7 +211,7 @@
 
       .footer {
         text-align: center;
-        margin-top: 60px;
+        margin-top: 100px;
         opacity: 0.8;
       }
 
@@ -219,6 +237,7 @@
     </style>
   </head>
   <body>
+    <div class="mouse-glow" id="mouseGlow"></div>
     <div class="container">
       <div class="header">
         <h1>🎮 GAME SPLICE</h1>
@@ -229,10 +248,7 @@
         <div class="game-card" onclick="playGame('jumpasaurus.html')">
           <div class="game-icon">🦕</div>
           <h3>Jumpasaurus</h3>
-          <p>
-            Help the pixelated dinosaur collect food while avoiding dangerous
-            cacti!
-          </p>
+          <p>Help the pixelated dinosaur collect food while avoiding cacti!</p>
           <a href="jumpasaurus.html" class="play-btn">Play Now</a>
         </div>
 
@@ -257,8 +273,7 @@
           <div class="game-icon">🟡</div>
           <h3>Dot Muncher</h3>
           <p>
-            Navigate through mazes, collect dots, and avoid the colorful ghosts
-            in this classic arcade game!
+            Navigate through mazes, collect dots, and avoid the colorful ghosts!
           </p>
           <a href="dotmuncher.html" class="play-btn">Play Now</a>
         </div>
@@ -266,50 +281,35 @@
         <div class="game-card" onclick="playGame('spacedefender.html')">
           <div class="game-icon">🚀</div>
           <h3>Space Defender</h3>
-          <p>
-            Defend Earth from alien invaders! Shoot down UFOs and collect
-            power-ups in this action-packed shooter.
-          </p>
+          <p>Save Earth from alien invaders by shooting.</p>
           <a href="spacedefender.html" class="play-btn">Play Now</a>
         </div>
 
         <div class="game-card" onclick="playGame('skynavigator.html')">
           <div class="game-icon">🐦</div>
           <h3>Sky Navigator</h3>
-          <p>
-            Guide the bird through obstacles by tapping to fly. Simple controls,
-            challenging gameplay!
-          </p>
+          <p>Guide the bird through obstacles by flying.</p>
           <a href="skynavigator.html" class="play-btn">Play Now</a>
         </div>
 
         <div class="game-card" onclick="playGame('speedracer.html')">
           <div class="game-icon">🏎️</div>
           <h3>Speed Racer</h3>
-          <p>
-            Race through traffic, collect coins, and upgrade your car in this
-            high-speed racing adventure!
-          </p>
+          <p>Race through traffic, collect coins, and upgrade your car!</p>
           <a href="speedracer.html" class="play-btn">Play Now</a>
         </div>
 
         <div class="game-card" onclick="playGame('memorymaster.html')">
           <div class="game-icon">🧠</div>
           <h3>Memory Master</h3>
-          <p>
-            Test your memory with this challenging card matching game. Find
-            pairs and beat your best time!
-          </p>
+          <p>Test your memory with card matching game.</p>
           <a href="memorymaster.html" class="play-btn">Play Now</a>
         </div>
 
         <div class="game-card" onclick="playGame('sudoku.html')">
           <div class="game-icon">🔢</div>
           <h3>Sudoku Solver</h3>
-          <p>
-            Challenge your mind with the classic number puzzle! Fill the grid
-            with numbers 1-9 using logic and strategy.
-          </p>
+          <p>Challenge your mind with number puzzle!</p>
           <a href="sudoku.html" class="play-btn">Play Now</a>
         </div>
       </div>
@@ -320,6 +320,23 @@
     </div>
 
     <script>
+      // Mouse glow effect
+      const mouseGlow = document.getElementById('mouseGlow');
+
+      document.addEventListener('mousemove', e => {
+        mouseGlow.style.left = e.clientX + 'px';
+        mouseGlow.style.top = e.clientY + 'px';
+        mouseGlow.style.opacity = '1';
+      });
+
+      document.addEventListener('mouseleave', () => {
+        mouseGlow.style.opacity = '0';
+      });
+
+      document.addEventListener('mouseenter', () => {
+        mouseGlow.style.opacity = '1';
+      });
+
       function playGame(gameUrl) {
         createClickEffect(event);
         setTimeout(() => {

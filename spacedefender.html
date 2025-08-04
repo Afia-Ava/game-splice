@@ -198,6 +198,295 @@
     <script>
       const canvas = document.getElementById('gameCanvas');
       const ctx = canvas.getContext('2d');
+      let audioContext;
+      let masterGain;
+      let backgroundMusic;
+      let musicGain;
+      function initAudio() {
+        try {
+          audioContext = new (window.AudioContext ||
+            window.webkitAudioContext)();
+          masterGain = audioContext.createGain();
+          masterGain.gain.value = 0.3;
+          masterGain.connect(audioContext.destination);
+          startBackgroundMusic();
+        } catch (e) {
+          console.log('Web Audio API not supported');
+        }
+      }
+
+      function startBackgroundMusic() {
+        if (!audioContext) return;
+        musicGain = audioContext.createGain();
+        musicGain.gain.value = 0.15;
+        musicGain.connect(masterGain);
+      }
+
+      function playBackgroundMusic() {
+        if (!audioContext) return;
+        const drone1 = audioContext.createOscillator();
+        const drone2 = audioContext.createOscillator();
+        const drone3 = audioContext.createOscillator();
+        const filter1 = audioContext.createBiquadFilter();
+        const filter2 = audioContext.createBiquadFilter();
+        const filter3 = audioContext.createBiquadFilter();
+        const gain1 = audioContext.createGain();
+        const gain2 = audioContext.createGain();
+        const gain3 = audioContext.createGain();
+        drone1.type = 'sine';
+        drone1.frequency.setValueAtTime(55, audioContext.currentTime);
+        drone2.type = 'sine';
+        drone2.frequency.setValueAtTime(82.4, audioContext.currentTime);
+        drone3.type = 'triangle';
+        drone3.frequency.setValueAtTime(110, audioContext.currentTime);
+        const lfo1 = audioContext.createOscillator();
+        const lfo2 = audioContext.createOscillator();
+        const lfoGain1 = audioContext.createGain();
+        const lfoGain2 = audioContext.createGain();
+
+        lfo1.type = 'sine';
+        lfo1.frequency.setValueAtTime(0.1, audioContext.currentTime);
+        lfoGain1.gain.setValueAtTime(2, audioContext.currentTime);
+        lfo2.type = 'sine';
+        lfo2.frequency.setValueAtTime(0.07, audioContext.currentTime);
+        lfoGain2.gain.setValueAtTime(1, audioContext.currentTime);
+        lfo1.connect(lfoGain1);
+        lfoGain1.connect(drone1.frequency);
+        lfo2.connect(lfoGain2);
+        lfoGain2.connect(drone3.frequency);
+        filter1.type = 'lowpass';
+        filter1.frequency.setValueAtTime(800, audioContext.currentTime);
+        filter1.Q.setValueAtTime(1, audioContext.currentTime);
+
+        filter2.type = 'lowpass';
+        filter2.frequency.setValueAtTime(600, audioContext.currentTime);
+        filter2.Q.setValueAtTime(1, audioContext.currentTime);
+        filter3.type = 'lowpass';
+        filter3.frequency.setValueAtTime(1000, audioContext.currentTime);
+        filter3.Q.setValueAtTime(0.5, audioContext.currentTime);
+        gain1.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gain2.gain.setValueAtTime(0.2, audioContext.currentTime);
+        gain3.gain.setValueAtTime(0.1, audioContext.currentTime);
+
+        drone1.connect(filter1);
+        filter1.connect(gain1);
+        gain1.connect(musicGain);
+        drone2.connect(filter2);
+        filter2.connect(gain2);
+        gain2.connect(musicGain);
+        drone3.connect(filter3);
+        filter3.connect(gain3);
+        gain3.connect(musicGain);
+        const now = audioContext.currentTime;
+        drone1.start(now);
+        drone2.start(now);
+        drone3.start(now);
+        lfo1.start(now);
+        lfo2.start(now);
+
+        setTimeout(() => {
+          playSpaceArpeggio();
+        }, 2000);
+
+        setTimeout(() => {
+          if (gameRunning && audioContext) {
+            playBackgroundMusic();
+          }
+        }, 15000);
+      }
+
+      function playSpaceArpeggio() {
+        if (!audioContext || !gameRunning) return;
+
+        const notes = [220, 246.94, 293.66, 369.99];
+        const startTime = audioContext.currentTime;
+
+        notes.forEach((freq, index) => {
+          const osc = audioContext.createOscillator();
+          const gain = audioContext.createGain();
+          const filter = audioContext.createBiquadFilter();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, startTime + index * 0.5);
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(1500, startTime + index * 0.5);
+          gain.gain.setValueAtTime(0, startTime + index * 0.5);
+          gain.gain.linearRampToValueAtTime(
+            0.08,
+            startTime + index * 0.5 + 0.1
+          );
+          gain.gain.exponentialRampToValueAtTime(
+            0.001,
+            startTime + index * 0.5 + 1.5
+          );
+
+          osc.connect(filter);
+          filter.connect(gain);
+          gain.connect(musicGain);
+          osc.start(startTime + index * 0.5);
+          osc.stop(startTime + index * 0.5 + 1.5);
+        });
+
+        setTimeout(() => {
+          if (gameRunning && audioContext) {
+            playSpaceArpeggio();
+          }
+        }, 8000);
+      }
+
+      function stopBackgroundMusic() {
+        if (musicGain) {
+          musicGain.gain.exponentialRampToValueAtTime(
+            0.001,
+            audioContext.currentTime + 1
+          );
+        }
+      }
+
+      function playShootSound() {
+        if (!audioContext) return;
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(masterGain);
+        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(
+          200,
+          audioContext.currentTime + 0.1
+        );
+
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(
+          0.01,
+          audioContext.currentTime + 0.1
+        );
+
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.1);
+      }
+
+      function playExplosionSound() {
+        if (!audioContext) return;
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        const filter = audioContext.createBiquadFilter();
+        oscillator.connect(filter);
+        filter.connect(gainNode);
+        gainNode.connect(masterGain);
+        oscillator.type = 'sawtooth';
+        oscillator.frequency.setValueAtTime(150, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(
+          50,
+          audioContext.currentTime + 0.3
+        );
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(2000, audioContext.currentTime);
+        filter.frequency.exponentialRampToValueAtTime(
+          200,
+          audioContext.currentTime + 0.3
+        );
+
+        gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(
+          0.01,
+          audioContext.currentTime + 0.3
+        );
+
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.3);
+      }
+
+      function playPowerUpSound() {
+        if (!audioContext) return;
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(masterGain);
+        oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
+        oscillator.frequency.setValueAtTime(
+          600,
+          audioContext.currentTime + 0.1
+        );
+        oscillator.frequency.setValueAtTime(
+          800,
+          audioContext.currentTime + 0.2
+        );
+        gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+        gainNode.gain.setValueAtTime(0.2, audioContext.currentTime + 0.2);
+        gainNode.gain.exponentialRampToValueAtTime(
+          0.01,
+          audioContext.currentTime + 0.3
+        );
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.3);
+      }
+
+      function playGameOverSound() {
+        if (!audioContext) return;
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(masterGain);
+        oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(
+          100,
+          audioContext.currentTime + 1
+        );
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(
+          0.01,
+          audioContext.currentTime + 1
+        );
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 1);
+      }
+
+      function playLevelUpSound() {
+        if (!audioContext) return;
+
+        const notes = [440, 554, 659, 880];
+        notes.forEach((freq, index) => {
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+
+          oscillator.connect(gainNode);
+          gainNode.connect(masterGain);
+
+          oscillator.frequency.setValueAtTime(
+            freq,
+            audioContext.currentTime + index * 0.1
+          );
+
+          gainNode.gain.setValueAtTime(
+            0.2,
+            audioContext.currentTime + index * 0.1
+          );
+          gainNode.gain.exponentialRampToValueAtTime(
+            0.01,
+            audioContext.currentTime + index * 0.1 + 0.2
+          );
+
+          oscillator.start(audioContext.currentTime + index * 0.1);
+          oscillator.stop(audioContext.currentTime + index * 0.1 + 0.2);
+        });
+      }
+
+      let audioInitialized = false;
+      document.addEventListener('click', () => {
+        if (!audioInitialized) {
+          initAudio();
+          playBackgroundMusic();
+          audioInitialized = true;
+        }
+      });
+
+      document.addEventListener('keydown', () => {
+        if (!audioInitialized) {
+          initAudio();
+          playBackgroundMusic();
+          audioInitialized = true;
+        }
+      });
 
       let score = 0;
       let lives = 3;
@@ -252,6 +541,7 @@
       });
 
       function shootBullet() {
+        playShootSound();
         bullets.push({
           x: player.x + player.width / 2 - 2,
           y: player.y,
@@ -359,6 +649,7 @@
                 enemy.x + enemy.width / 2,
                 enemy.y + enemy.height / 2
               );
+              playExplosionSound();
               score += enemy.points;
               bullets.splice(i, 1);
               enemies.splice(j, 1);
@@ -389,6 +680,7 @@
               player.y + player.height / 2,
               50
             );
+            playExplosionSound();
             lives--;
             enemies.splice(i, 1);
 
@@ -415,6 +707,7 @@
             powerUp.y < player.y + player.height &&
             powerUp.y + powerUp.height > player.y
           ) {
+            playPowerUpSound();
             score += 50;
             powerUps.splice(i, 1);
           }
@@ -445,10 +738,8 @@
       function drawPlayer() {
         ctx.fillStyle = '#00aaff';
         ctx.fillRect(player.x, player.y, player.width, player.height);
-
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(player.x + player.width / 2 - 2, player.y - 5, 4, 10);
-
         ctx.fillStyle = '#ff0000';
         ctx.fillRect(player.x + 5, player.y + player.height - 10, 8, 8);
         ctx.fillRect(
@@ -480,7 +771,6 @@
         for (let powerUp of powerUps) {
           ctx.fillStyle = powerUp.color;
           ctx.fillRect(powerUp.x, powerUp.y, powerUp.width, powerUp.height);
-
           ctx.strokeStyle = '#ffffff';
           ctx.strokeRect(powerUp.x, powerUp.y, powerUp.width, powerUp.height);
         }
@@ -490,18 +780,15 @@
         for (let explosion of explosions) {
           const alpha = explosion.life / explosion.maxLife;
           const size = explosion.size * (1 - alpha * 0.5);
-
           ctx.globalAlpha = alpha;
           ctx.fillStyle = '#ffaa00';
           ctx.beginPath();
           ctx.arc(explosion.x, explosion.y, size, 0, Math.PI * 2);
           ctx.fill();
-
           ctx.fillStyle = '#ff4400';
           ctx.beginPath();
           ctx.arc(explosion.x, explosion.y, size * 0.6, 0, Math.PI * 2);
           ctx.fill();
-
           ctx.globalAlpha = 1;
         }
       }
@@ -523,6 +810,8 @@
 
       function gameOver() {
         gameRunning = false;
+        stopBackgroundMusic();
+        playGameOverSound();
         document.getElementById('finalScore').textContent = score;
         document.getElementById('finalLevel').textContent = level;
         document.getElementById('gameOverScreen').style.display = 'block';
@@ -533,20 +822,21 @@
         lives = 3;
         level = 1;
         gameRunning = true;
-
         player.x = canvas.width / 2 - 25;
         player.y = canvas.height - 80;
-
         bullets = [];
         enemies = [];
         powerUps = [];
         explosions = [];
-
         enemySpawnTimer = 0;
         powerUpSpawnTimer = 0;
         bulletCooldown = 0;
-
         document.getElementById('gameOverScreen').style.display = 'none';
+
+        if (audioContext) {
+          startBackgroundMusic();
+          playBackgroundMusic();
+        }
       }
 
       function gameLoop() {
@@ -554,7 +844,6 @@
           requestAnimationFrame(gameLoop);
           return;
         }
-
         updatePlayer();
         updateBullets();
         updateEnemies();
@@ -576,10 +865,10 @@
 
         if (score > level * 1000) {
           level++;
+          playLevelUpSound();
         }
 
         if (bulletCooldown > 0) bulletCooldown--;
-
         ctx.fillStyle = '#000011';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         drawStars();
@@ -589,10 +878,8 @@
         drawPowerUps();
         drawExplosions();
         drawUI();
-
         requestAnimationFrame(gameLoop);
       }
-
       gameLoop();
     </script>
   </body>

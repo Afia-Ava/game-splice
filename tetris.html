@@ -94,7 +94,7 @@
         flex-direction: column;
         gap: 8px;
         font-family: 'Courier New', monospace;
-        width: 160px;
+        width: 220px;
         max-width: calc(100vw - 350px);
         z-index: 1000;
       }
@@ -106,9 +106,9 @@
         text-transform: uppercase;
         letter-spacing: 0.5px;
         border: 2px solid white;
-        padding: 12px 15px;
+        padding: 15px 20px;
         background: rgba(0, 0, 0, 0.8);
-        text-align: center;
+        text-align: left;
       }
 
       .controls {
@@ -120,9 +120,9 @@
         color: #ccc;
         line-height: 1.4;
         border: 1px solid #666;
-        padding: 12px;
+        padding: 15px 20px;
         background: rgba(0, 0, 0, 0.6);
-        text-align: center;
+        text-align: left;
       }
     </style>
   </head>
@@ -265,7 +265,6 @@
             rotated[i][j] = piece[rows - 1 - j][i];
           }
         }
-
         return rotated;
       }
 
@@ -289,7 +288,7 @@
         return false;
       }
 
-      function merge() {
+      function mergr() {
         for (let row = 0; row < currentPiece.shape.length; row++) {
           for (let col = 0; col < currentPiece.shape[row].length; col++) {
             if (currentPiece.shape[row][col]) {
@@ -391,7 +390,6 @@
           }
           dropTime = 0;
         }
-
         draw();
         requestAnimationFrame(update);
       }
@@ -427,7 +425,6 @@
             break;
         }
       });
-
       createPiece();
       update();
     </script>
