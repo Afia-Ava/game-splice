@@ -18,6 +18,7 @@ backup-*
 # Sensitive data
 *api_key*
 *secret*
+firebase-config.js
 *token*
 *.env
 firebase-config.js

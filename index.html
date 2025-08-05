@@ -684,31 +684,58 @@
         alert('Firebase configuration error. Please check the setup.');
       }
 
-      let auth, db;
-      try {
-        firebase.initializeApp(window.firebaseConfig);
-        auth = firebase.auth();
-        db = firebase.firestore();
-        console.log('Firebase initialized successfully');
-      } catch (error) {
-        console.error('Firebase initialization error:', error);
-        alert(
-          'Firebase initialization failed. Please check your configuration.'
-        );
-      }
-
-      let currentUser = null;
+      let auth,
+        db,
+        currentUser = null;
       let isLogin = true;
 
-      auth.onAuthStateChanged(user => {
-        if (user) {
-          currentUser = user;
-          updateUserUI(user);
-        } else {
-          currentUser = null;
-          updateUserUI(null);
+      function initializeFirebase() {
+        return new Promise((resolve, reject) => {
+          if (typeof window.firebaseConfig === 'undefined') {
+            console.warn(
+              'Firebase configuration not loaded. Please check firebase-config.js'
+            );
+            alert('Firebase configuration error. Please check the setup.');
+            reject(new Error('Firebase config not available'));
+            return;
+          }
+
+          try {
+            firebase.initializeApp(window.firebaseConfig);
+            auth = firebase.auth();
+            db = firebase.firestore();
+
+            auth.onAuthStateChanged(user => {
+              currentUser = user;
+              updateUI();
+            });
+
+            console.log('✅ Firebase initialized successfully');
+            resolve();
+          } catch (error) {
+            console.error('❌ Firebase initialization error:', error);
+            alert('Firebase initialization failed: ' + error.message);
+            reject(error);
+          }
+        });
+      }
+
+      document.addEventListener('DOMContentLoaded', async () => {
+        try {
+          await initializeFirebase();
+        } catch (error) {
+          console.error('Failed to initialize Firebase:', error);
+          const authForms = document.querySelectorAll('.auth-form');
+          authForms.forEach(form => {
+            form.innerHTML =
+              '<p style="color: #ff6666; text-align: center;">Firebase configuration required for authentication.</p>';
+          });
         }
       });
+
+      function updateUI() {
+        updateUserUI(currentUser);
+      }
 
       function updateUserUI(user) {
         const userIcon = document.getElementById('userIcon');
