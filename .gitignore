@@ -1,31 +1,9 @@
-# IDE/Editor files
+# Editor/OS files
 .vscode/
 .idea/
-
-# Temporary files
-*.tmp
-*~
 .DS_Store
 Thumbs.db
 
-# Development and test files
-*-simple.html
-*-test.html
-test.html
-backup-*
-*-backup.*
-
-# Sensitive data
-*api_key*
-*secret*
-firebase-config.js
-*token*
-*.env
-firebase-config.js
-
 # Logs
 *.log
-
-# Node modules (in case you add Node.js later)
-node_modules/
 
