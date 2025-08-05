@@ -14,4 +14,6 @@ A collection of 9 classic web games
 - **Memory Master** - Test your memory with card matching
 - **Sudoku Solver** - Challenge your mind with number puzzles
 
+![Game Splice](game-splice.png)
+
 Enjoy gaming! 🎮
