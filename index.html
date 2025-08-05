@@ -723,6 +723,9 @@
       document.addEventListener('DOMContentLoaded', async () => {
         try {
           await initializeFirebase();
+          if (!currentUser) {
+            document.getElementById('authModal').style.display = 'flex';
+          }
         } catch (error) {
           console.error('Failed to initialize Firebase:', error);
           const authForms = document.querySelectorAll('.auth-form');
